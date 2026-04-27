@@ -9,6 +9,7 @@ import { cloudflare } from '@cloudflare/vite-plugin';
 
 const config = defineConfig({
 	resolve: { tsconfigPaths: true },
+	ssr: { noExternal: ['@diffy/shared'] },
 	plugins: [devtools(), cloudflare({ viteEnvironment: { name: 'ssr' } }), tailwindcss(), tanstackStart(), viteReact()],
 });
 

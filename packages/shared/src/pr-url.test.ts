@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { diffyPrPath, parseGithubPrUrl } from './pr-url.ts';
+import { appPrPath, parseGithubPrUrl } from './pr-url';
 
 describe('parseGithubPrUrl', () => {
 	it('parses a canonical PR url', () => {
@@ -25,8 +25,8 @@ describe('parseGithubPrUrl', () => {
 	});
 });
 
-describe('diffyPrPath', () => {
+describe('appPrPath', () => {
 	it('builds the diffy route', () => {
-		expect(diffyPrPath({ owner: 'foo', repo: 'bar', number: 42 })).toBe('/pr/foo/bar/42');
+		expect(appPrPath({ owner: 'foo', repo: 'bar', number: 42 })).toBe('/pr/foo/bar/42');
 	});
 });
