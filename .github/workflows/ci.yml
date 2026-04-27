@@ -1,0 +1,34 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.3
+
+      - run: bun install --frozen-lockfile
+
+      - name: Biome check
+        run: bun --filter '*' check
+
+      - name: Typecheck extension
+        run: bun --filter wxt-react-starter compile
+
+      - name: Test
+        run: bun --filter '*' test
+
+      - name: Build
+        run: bun --filter '*' build
