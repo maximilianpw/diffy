@@ -7,6 +7,7 @@
     "dev": "bun --filter '@diffy/web' dev",
     "build": "bun --filter '*' build",
     "check": "bun --filter '*' check",
+    "test": "bun --filter '*' test",
     "deploy": "bun --filter '@diffy/web' deploy"
   },
   "devDependencies": {

@@ -4,8 +4,7 @@ export type PrRef = {
 	number: number;
 };
 
-const GITHUB_PR_RE =
-	/^https?:\/\/github\.com\/([^/]+)\/([^/]+)\/pull\/(\d+)(?:[/?#].*)?$/;
+const GITHUB_PR_RE = /^https?:\/\/github\.com\/([^/]+)\/([^/]+)\/pull\/(\d+)(?:[/?#].*)?$/;
 
 export function parseGithubPrUrl(url: string): PrRef | null {
 	const m = url.trim().match(GITHUB_PR_RE);

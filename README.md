@@ -8,6 +8,8 @@ A self-hosted GitHub PR diff viewer. Open from a browser-extension tab next to "
 - `apps/extension` — WXT browser extension (Chrome + Firefox).
 - `packages/shared` — URL parser and shared types (`@diffy/shared`).
 
+See `docs/architecture.md` for the intended module boundaries, runtime flow, and vertical slice order.
+
 ## Develop
 
 ```sh
