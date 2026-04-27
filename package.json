@@ -1,0 +1,16 @@
+{
+  "name": "diffy",
+  "private": true,
+  "type": "module",
+  "workspaces": ["apps/*", "packages/*"],
+  "scripts": {
+    "dev": "bun --filter '@diffy/web' dev",
+    "build": "bun --filter '*' build",
+    "check": "bun --filter '*' check",
+    "deploy": "bun --filter '@diffy/web' deploy"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "2.4.5",
+    "typescript": "^6.0.2"
+  }
+}

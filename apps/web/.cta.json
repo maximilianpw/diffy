@@ -1,0 +1,25 @@
+{
+  "projectName": "diffy",
+  "mode": "file-router",
+  "typescript": true,
+  "packageManager": "bun",
+  "includeExamples": false,
+  "tailwind": true,
+  "addOnOptions": {},
+  "envVarValues": {
+    "CONVEX_DEPLOYMENT": "diffy",
+    "VITE_CONVEX_URL": "https://maximilianpw.com/diffy"
+  },
+  "git": true,
+  "install": true,
+  "routerOnly": false,
+  "version": 1,
+  "framework": "react",
+  "chosenAddOns": [
+    "biome",
+    "cloudflare",
+    "convex",
+    "shadcn",
+    "t3env"
+  ]
+}
