@@ -1,23 +1,18 @@
-import { useState } from "react";
-import { Alert, AlertDescription } from "#/components/ui/alert";
-import { Button } from "#/components/ui/button";
-import {
-	Card,
-	CardContent,
-	CardDescription,
-	CardHeader,
-	CardTitle,
-} from "#/components/ui/card";
-import { Input } from "#/components/ui/input";
-import { Label } from "#/components/ui/label";
-import { getPrPathFromSubmission } from "./parse-submission";
+import { useState } from 'react';
+import { Eyebrow } from '#/components/section-header';
+import { Alert, AlertDescription } from '#/components/ui/alert';
+import { Button } from '#/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '#/components/ui/card';
+import { Input } from '#/components/ui/input';
+import { Label } from '#/components/ui/label';
+import { getPrPathFromSubmission } from './parse-submission';
 
 type PastePrHomeProps = {
 	navigateToPr: (path: string) => void;
 };
 
 export function PastePrHome({ navigateToPr }: PastePrHomeProps) {
-	const [value, setValue] = useState("");
+	const [value, setValue] = useState('');
 	const [error, setError] = useState<string | null>(null);
 
 	function onSubmit(event: React.FormEvent<HTMLFormElement>) {
@@ -25,7 +20,7 @@ export function PastePrHome({ navigateToPr }: PastePrHomeProps) {
 
 		const path = getPrPathFromSubmission(value);
 		if (!path) {
-			setError("Paste a GitHub pull request URL.");
+			setError('Paste a GitHub pull request URL.');
 			return;
 		}
 
@@ -37,13 +32,10 @@ export function PastePrHome({ navigateToPr }: PastePrHomeProps) {
 		<main className="mx-auto flex min-h-screen w-full max-w-2xl flex-col justify-center px-6 py-12">
 			<Card>
 				<CardHeader>
-					<p className="font-medium text-muted-foreground text-xs uppercase tracking-wider">
-						Diffy
-					</p>
+					<Eyebrow>Diffy</Eyebrow>
 					<CardTitle className="text-2xl">Open a GitHub pull request</CardTitle>
 					<CardDescription>
-						Paste a public PR URL to inspect its changed files in a focused diff
-						viewer.
+						Paste a public PR URL to inspect its changed files in a focused diff viewer.
 					</CardDescription>
 				</CardHeader>
 				<CardContent>
@@ -65,7 +57,10 @@ export function PastePrHome({ navigateToPr }: PastePrHomeProps) {
 						<Button type="submit">Open PR</Button>
 					</form>
 					{error ? (
-						<Alert variant="destructive" className="mt-3">
+						<Alert
+							variant="destructive"
+							className="mt-3"
+						>
 							<AlertDescription>{error}</AlertDescription>
 						</Alert>
 					) : null}

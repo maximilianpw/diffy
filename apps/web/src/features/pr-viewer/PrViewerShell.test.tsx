@@ -13,7 +13,7 @@ describe('PrViewerShell', () => {
 		);
 
 		expect(screen.getByRole('heading', { name: 'tanstack/router#123' })).toBeTruthy();
-		expect(screen.getByRole('navigation', { name: 'Changed files' })).toBeTruthy();
+		expect(screen.getByText('Changed files')).toBeTruthy();
 		expect(screen.getByRole('region', { name: 'Diff preview' })).toBeTruthy();
 		expect(screen.getByText('Static preview data')).toBeTruthy();
 	});
