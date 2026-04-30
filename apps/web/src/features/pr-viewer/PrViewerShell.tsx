@@ -1,112 +1,135 @@
-import { PatchDiff } from '@pierre/diffs/react';
-import { themeToTreeStyles } from '@pierre/trees';
-import { FileTree, useFileTree } from '@pierre/trees/react';
-import vesper from '@shikijs/themes/vesper';
-import { SectionHeader } from '#/components/section-header';
-import { Badge } from '#/components/ui/badge';
-import { Card } from '#/components/ui/card';
-import { Separator } from '#/components/ui/separator';
-import { splitPatchFiles } from './diff-paths';
+import { themeToTreeStyles } from "@pierre/trees";
+import { FileTree, useFileTree } from "@pierre/trees/react";
+import vesper from "@shikijs/themes/vesper";
+import { Card } from "#/components/ui/card";
+import { Separator } from "#/components/ui/separator";
+import type { Doc } from "../../../convex/_generated/dataModel";
+import { splitPatchFiles } from "./diff-paths";
+import { FileCard } from "./FileCard";
+import { PrSummaryCard } from "./PrSummaryCard";
+import { useViewedFiles } from "./use-viewed-files";
 
 const treeThemeStyles = themeToTreeStyles(vesper);
 
+type PrDoc = Doc<"pullRequests">;
+
 type PrViewerShellProps = {
-	owner: string;
-	repo: string;
-	number: number;
-	status: 'importing' | 'ready' | 'error';
+	pr: PrDoc | null;
+	status: "importing" | "ready" | "error";
 	paths: string[];
 	patch: string | null;
 	error?: string | null;
 };
 
-export function PrViewerShell({ owner, repo, number, status, paths, patch, error }: PrViewerShellProps) {
-	const patchFiles = patch ? splitPatchFiles(patch) : [];
-	const treeKey = paths.join('\0');
+export function PrViewerShell({
+	pr,
+	status,
+	paths,
+	patch,
+	error,
+}: PrViewerShellProps) {
+	const treeKey = paths.join("\0");
 
 	return (
-		<main className="min-h-screen bg-background text-foreground">
-			<SectionHeader
-				eyebrow="Diffy"
-				className="border-b bg-card px-6 py-4"
+		<div className="grid min-h-[calc(100vh-3rem)] grid-cols-1 lg:grid-cols-[280px_1fr]">
+			<ChangedFilesTree key={treeKey} paths={paths} />
+
+			<section
+				aria-label="Diff preview"
+				className="flex flex-col gap-6 px-6 py-8 lg:px-10"
 			>
-				{owner}/{repo}#{number}
-			</SectionHeader>
+				{pr ? <PrSummaryCard pr={pr} /> : null}
 
-			<div className="grid min-h-[calc(100vh-89px)] grid-cols-1 lg:grid-cols-[340px_1fr]">
-				<ChangedFilesTree
-					key={treeKey}
-					paths={paths}
+				{status === "importing" ? (
+					<Card className="p-4 text-muted-foreground">
+						Importing pull request from GitHub...
+					</Card>
+				) : status === "error" ? (
+					<Card className="p-4 text-destructive">
+						{error ?? "Could not load pull request."}
+					</Card>
+				) : pr && patch ? (
+					<DiffStack
+						key={`${pr.owner}/${pr.repo}#${pr.number}`}
+						pr={pr}
+						patch={patch}
+						paths={paths}
+					/>
+				) : (
+					<Card className="p-4 text-muted-foreground">
+						No diff content available.
+					</Card>
+				)}
+			</section>
+		</div>
+	);
+}
+
+function DiffStack({
+	pr,
+	patch,
+	paths,
+}: {
+	pr: PrDoc;
+	patch: string;
+	paths: string[];
+}) {
+	const patchFiles = splitPatchFiles(patch);
+	const { isViewed, toggle } = useViewedFiles({
+		owner: pr.owner,
+		repo: pr.repo,
+		number: pr.number,
+	});
+
+	return (
+		<div className="flex flex-col gap-4">
+			<div className="sr-only">{paths.join("\n")}</div>
+			{patchFiles.map((file) => (
+				<FileCard
+					key={file.path}
+					path={file.path}
+					patch={file.patch}
+					viewed={isViewed(file.path)}
+					onToggleViewed={() => toggle(file.path)}
 				/>
-
-				<section
-					aria-label="Diff preview"
-					className="p-6"
-				>
-					<div className="mb-4 flex items-center justify-between gap-4">
-						<SectionHeader
-							eyebrow="Imported from GitHub"
-							level="h2"
-						>
-							{status === 'ready' ? 'Pull request diff' : 'Loading pull request'}
-						</SectionHeader>
-						<Badge variant="secondary">{status}</Badge>
-					</div>
-
-					{status === 'importing' ? (
-						<Card className="p-4">Importing pull request from GitHub...</Card>
-					) : status === 'error' ? (
-						<Card className="p-4 text-destructive">{error ?? 'Could not load pull request.'}</Card>
-					) : patch ? (
-						<div className="space-y-4">
-							<div className="sr-only">{paths.join('\n')}</div>
-							{patchFiles.map((file) => (
-								<Card
-									key={file.path}
-									className="p-0"
-									size="sm"
-								>
-									<PatchDiff
-										patch={file.patch}
-										options={{ theme: 'vesper' }}
-										disableWorkerPool
-									/>
-								</Card>
-							))}
-						</div>
-					) : (
-						<Card className="p-4">No diff content available.</Card>
-					)}
-				</section>
-			</div>
-		</main>
+			))}
+		</div>
 	);
 }
 
 function ChangedFilesTree({ paths }: { paths: string[] }) {
 	const { model } = useFileTree({
 		paths,
-		initialExpansion: 'open',
+		initialExpansion: "open",
 		flattenEmptyDirectories: true,
 		stickyFolders: true,
 		search: true,
-		density: 'relaxed',
+		density: "relaxed",
 	});
 
 	return (
-		<FileTree
-			model={model}
-			header={
-				<>
-					<div className="flex items-center justify-between px-4 py-3">
-						<span className="font-medium text-sm">Changed files</span>
-						<Badge variant="secondary">{paths.length}</Badge>
-					</div>
-					<Separator />
-				</>
-			}
-			className="border-b bg-card lg:border-r lg:border-b-0"
-			style={{ height: 'calc(100vh - 89px)', ...treeThemeStyles }}
-		/>
+		<aside
+			className="border-b bg-card lg:sticky lg:top-12 lg:self-start lg:border-r lg:border-b-0"
+			style={{ height: "calc(100vh - 3rem)" }}
+		>
+			<FileTree
+				model={model}
+				header={
+					<>
+						<div className="flex items-center justify-between px-4 py-3">
+							<span className="font-medium font-mono text-[11px] uppercase tracking-wider text-muted-foreground">
+								Changed files
+							</span>
+							<span className="rounded-full bg-muted px-2 py-0.5 font-mono text-[10px] tabular-nums text-muted-foreground">
+								{paths.length}
+							</span>
+						</div>
+						<Separator />
+					</>
+				}
+				className="h-full"
+				style={{ height: "calc(100vh - 3rem)", ...treeThemeStyles }}
+			/>
+		</aside>
 	);
 }

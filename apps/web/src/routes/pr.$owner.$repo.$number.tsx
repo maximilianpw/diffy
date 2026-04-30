@@ -2,6 +2,7 @@ import { useAction, useQuery } from 'convex/react';
 import { createFileRoute } from '@tanstack/react-router';
 import { useEffect, useState } from 'react';
 import { api } from '../../convex/_generated/api';
+import { Crumb, CrumbLink, CrumbSeparator, TopBar } from '#/components/top-bar';
 import { getChangedPathsFromPatch } from '../features/pr-viewer/diff-paths';
 import { PrViewerShell } from '../features/pr-viewer/PrViewerShell';
 
@@ -60,14 +61,26 @@ function PrRoute() {
 	const paths = patch ? getChangedPathsFromPatch(patch) : [];
 
 	return (
-		<PrViewerShell
-			owner={owner}
-			repo={repo}
-			number={prNumber}
-			status={status}
-			paths={paths}
-			patch={patch}
-			error={error}
-		/>
+		<>
+			<TopBar
+				breadcrumb={
+					<>
+						<CrumbLink to="/">Pull requests</CrumbLink>
+						<CrumbSeparator />
+						<Crumb>
+							{owner}/{repo}#{number}
+						</Crumb>
+					</>
+				}
+				htmlUrl={pr?.htmlUrl}
+			/>
+			<PrViewerShell
+				pr={pr ?? null}
+				status={status}
+				paths={paths}
+				patch={patch}
+				error={error}
+			/>
+		</>
 	);
 }
