@@ -1,9 +1,11 @@
 import { PatchDiff } from "@pierre/diffs/react";
 import { Card } from "#/components/ui/card";
 import { cn } from "#/lib/utils";
-import { countDiffStats } from "./diff-stats";
+import { countDiffStats } from "../model/diff-stats";
+import { getFileFragmentId } from "../model/file-fragment";
 
 type FileCardProps = {
+	fileIndex: number;
 	path: string;
 	patch: string;
 	viewed: boolean;
@@ -11,26 +13,27 @@ type FileCardProps = {
 };
 
 export function FileCard({
+	fileIndex,
 	path,
 	patch,
 	viewed,
 	onToggleViewed,
 }: FileCardProps) {
 	const { additions, deletions } = countDiffStats(patch);
-	const headerId = `file-${path}`;
-	const bodyId = `file-${path}-body`;
+	const headerId = getFileFragmentId(fileIndex);
+	const bodyId = `${headerId}-body`;
 
 	return (
 		<Card
+			id={headerId}
 			className={cn(
-				"p-0 transition-colors",
+				"scroll-mt-12 p-0 transition-colors",
 				viewed && "ring-foreground/5 bg-card/60",
 			)}
 			size="sm"
 		>
 			<button
 				type="button"
-				id={headerId}
 				aria-expanded={!viewed}
 				aria-controls={bodyId}
 				aria-label={`Mark ${path} as viewed`}

@@ -1,26 +1,15 @@
 import { Badge } from "#/components/ui/badge";
 import { cn } from "#/lib/utils";
-import type { Doc } from "../../../convex/_generated/dataModel";
+import type { Doc } from "../../../../convex/_generated/dataModel";
+import {
+	PullRequestStateBadgeVariant,
+	PullRequestStateLabel,
+} from "../model/pull-request.types";
 
 type PrDoc = Doc<"pullRequests">;
 
 type PrSummaryCardProps = {
 	pr: PrDoc;
-};
-
-const STATUS_LABEL: Record<PrDoc["state"], string> = {
-	open: "Open",
-	closed: "Closed",
-	merged: "Merged",
-};
-
-const STATUS_VARIANT: Record<
-	PrDoc["state"],
-	"default" | "secondary" | "outline"
-> = {
-	open: "default",
-	closed: "outline",
-	merged: "secondary",
 };
 
 const dateFormatter = new Intl.DateTimeFormat("en-US", {
@@ -34,10 +23,10 @@ export function PrSummaryCard({ pr }: PrSummaryCardProps) {
 		<header className="flex flex-col gap-4 border-b pb-6">
 			<div className="flex items-center gap-2">
 				<Badge
-					variant={STATUS_VARIANT[pr.state]}
+					variant={PullRequestStateBadgeVariant[pr.state]}
 					className="h-6 px-2.5 text-[11px] uppercase tracking-wider"
 				>
-					{STATUS_LABEL[pr.state]}
+					{PullRequestStateLabel[pr.state]}
 				</Badge>
 				<span className="font-mono text-[11px] text-muted-foreground">
 					{pr.owner}/{pr.repo} #{pr.number}

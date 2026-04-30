@@ -1,13 +1,19 @@
 import { themeToTreeStyles } from "@pierre/trees";
 import { FileTree, useFileTree } from "@pierre/trees/react";
 import vesper from "@shikijs/themes/vesper";
+import type { MouseEvent as ReactMouseEvent } from "react";
+import { useEffect, useMemo } from "react";
 import { Card } from "#/components/ui/card";
 import { Separator } from "#/components/ui/separator";
-import type { Doc } from "../../../convex/_generated/dataModel";
-import { splitPatchFiles } from "./diff-paths";
+import type { Doc } from "../../../../convex/_generated/dataModel";
+import { useViewedFiles } from "../hooks/use-viewed-files";
+import { splitPatchFiles } from "../model/diff-paths";
+import {
+	findFileIndexForFragment,
+	jumpToFileFragment,
+} from "../model/file-fragment";
 import { FileCard } from "./FileCard";
 import { PrSummaryCard } from "./PrSummaryCard";
-import { useViewedFiles } from "./use-viewed-files";
 
 const treeThemeStyles = themeToTreeStyles(vesper);
 
@@ -32,7 +38,11 @@ export function PrViewerShell({
 
 	return (
 		<div className="grid min-h-[calc(100vh-3rem)] grid-cols-1 lg:grid-cols-[280px_1fr]">
-			<ChangedFilesTree key={treeKey} paths={paths} />
+			<ChangedFilesTree
+				key={treeKey}
+				paths={paths}
+				onFileSelect={jumpToFileFragment}
+			/>
 
 			<section
 				aria-label="Diff preview"
@@ -74,19 +84,25 @@ function DiffStack({
 	patch: string;
 	paths: string[];
 }) {
-	const patchFiles = splitPatchFiles(patch);
+	const patchFiles = useMemo(() => splitPatchFiles(patch), [patch]);
 	const { isViewed, toggle } = useViewedFiles({
 		owner: pr.owner,
 		repo: pr.repo,
 		number: pr.number,
 	});
 
+	useEffect(() => {
+		const fileIndex = findFileIndexForFragment(patchFiles.length);
+		if (fileIndex !== null) jumpToFileFragment(fileIndex);
+	}, [patchFiles.length]);
+
 	return (
 		<div className="flex flex-col gap-4">
 			<div className="sr-only">{paths.join("\n")}</div>
-			{patchFiles.map((file) => (
+			{patchFiles.map((file, fileIndex) => (
 				<FileCard
 					key={file.path}
+					fileIndex={fileIndex}
 					path={file.path}
 					patch={file.patch}
 					viewed={isViewed(file.path)}
@@ -97,7 +113,13 @@ function DiffStack({
 	);
 }
 
-function ChangedFilesTree({ paths }: { paths: string[] }) {
+function ChangedFilesTree({
+	paths,
+	onFileSelect,
+}: {
+	paths: string[];
+	onFileSelect: (fileIndex: number) => void;
+}) {
 	const { model } = useFileTree({
 		paths,
 		initialExpansion: "open",
@@ -106,6 +128,16 @@ function ChangedFilesTree({ paths }: { paths: string[] }) {
 		search: true,
 		density: "relaxed",
 	});
+
+	function handleTreeClick(event: ReactMouseEvent<HTMLElement>) {
+		const clickedPath = getClickedTreeFilePath(event.nativeEvent);
+		const isPlainClick = !event.ctrlKey && !event.metaKey && !event.shiftKey;
+		const fileIndex = clickedPath == null ? -1 : paths.indexOf(clickedPath);
+
+		if (isPlainClick && fileIndex >= 0) {
+			onFileSelect(fileIndex);
+		}
+	}
 
 	return (
 		<aside
@@ -128,8 +160,30 @@ function ChangedFilesTree({ paths }: { paths: string[] }) {
 					</>
 				}
 				className="h-full"
+				onClick={handleTreeClick}
 				style={{ height: "calc(100vh - 3rem)", ...treeThemeStyles }}
 			/>
 		</aside>
 	);
+}
+
+function getClickedTreeFilePath(event: MouseEvent): string | null {
+	const composedPath =
+		typeof event.composedPath === "function" ? event.composedPath() : [];
+
+	for (const target of composedPath) {
+		if (!(target instanceof HTMLElement)) continue;
+		if (target.dataset.itemType === "file") {
+			return target.dataset.itemPath ?? null;
+		}
+	}
+
+	if (event.target instanceof Element) {
+		return (
+			event.target.closest<HTMLElement>("[data-item-type='file']")?.dataset
+				.itemPath ?? null
+		);
+	}
+
+	return null;
 }

@@ -179,6 +179,21 @@ export const list = query({
 	},
 });
 
+export const listOpen = query({
+	args: {},
+	returns: v.array(prDoc),
+	handler: async (ctx) => {
+		await requireSignedIn(ctx);
+
+		return await ctx.db
+			.query('pullRequests')
+			.withIndex('by_last_viewed')
+			.order('desc')
+			.filter((q) => q.eq(q.field('state'), 'open'))
+			.take(50);
+	},
+});
+
 export const get = query({
 	args: { id: v.id('pullRequests') },
 	returns: v.union(prWithDiffUrl, v.null()),

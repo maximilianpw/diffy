@@ -3,8 +3,8 @@ import { createFileRoute } from '@tanstack/react-router';
 import { useEffect, useState } from 'react';
 import { api } from '../../convex/_generated/api';
 import { Crumb, CrumbLink, CrumbSeparator, TopBar } from '#/components/top-bar';
-import { getChangedPathsFromPatch } from '../features/pr-viewer/diff-paths';
-import { PrViewerShell } from '../features/pr-viewer/PrViewerShell';
+import { PrViewerShell } from '../features/pr-viewer/components/PrViewerShell';
+import { getChangedPathsFromPatch } from '../features/pr-viewer/model/diff-paths';
 
 export const Route = createFileRoute('/pr/$owner/$repo/$number')({
 	component: PrRoute,

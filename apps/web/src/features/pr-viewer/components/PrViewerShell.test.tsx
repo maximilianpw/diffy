@@ -1,6 +1,12 @@
-import { fireEvent, render, screen, within } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
-import type { Doc } from "../../../convex/_generated/dataModel";
+import {
+	fireEvent,
+	render,
+	screen,
+	waitFor,
+	within,
+} from "@testing-library/react";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import type { Doc } from "../../../../convex/_generated/dataModel";
 import { PrViewerShell } from "./PrViewerShell";
 
 const TWO_FILE_PATCH = `diff --git a/packages/router/src/index.ts b/packages/router/src/index.ts
@@ -46,7 +52,30 @@ function fixturePr(
 	};
 }
 
+async function findTreeFileRow(path: string) {
+	return waitFor(() => {
+		const tree = document.querySelector("file-tree-container");
+		expect(tree).toBeInstanceOf(HTMLElement);
+
+		const row = tree?.shadowRoot?.querySelector(`[data-item-path="${path}"]`);
+		expect(row).toBeInstanceOf(HTMLElement);
+		return row as HTMLElement;
+	});
+}
+
 describe("PrViewerShell", () => {
+	const scrollIntoView = vi.fn();
+
+	beforeEach(() => {
+		window.location.hash = "";
+		scrollIntoView.mockReset();
+		Object.defineProperty(Element.prototype, "scrollIntoView", {
+			configurable: true,
+			value: scrollIntoView,
+			writable: true,
+		});
+	});
+
 	it("renders the PR summary, file tree, and one card per changed file", () => {
 		render(
 			<PrViewerShell
@@ -93,6 +122,64 @@ describe("PrViewerShell", () => {
 		fireEvent.click(fileHeader);
 
 		expect(fileHeader.getAttribute("aria-expanded")).toBe("false");
+	});
+
+	it("updates the URL fragment and jumps to a file when its tree row is clicked", async () => {
+		render(
+			<PrViewerShell
+				pr={fixturePr()}
+				status="ready"
+				paths={["packages/router/src/index.ts", "packages/router/src/util.ts"]}
+				patch={TWO_FILE_PATCH}
+			/>,
+		);
+
+		const fileRow = await findTreeFileRow("packages/router/src/util.ts");
+		const fileHeader = screen.getByRole("button", {
+			name: /Mark packages\/router\/src\/util\.ts as viewed/,
+		});
+		const fileCard = document.getElementById("2");
+		expect(fileCard).toBeInstanceOf(HTMLElement);
+		expect(fileCard?.getAttribute("data-slot")).toBe("card");
+
+		fireEvent.mouseDown(fileRow);
+		fireEvent.click(fileRow);
+
+		expect(window.location.hash).toBe("#2");
+		expect(scrollIntoView).toHaveBeenCalledTimes(1);
+		expect(scrollIntoView.mock.instances[0]).toBe(fileCard);
+		expect(fileCard?.contains(fileHeader)).toBe(true);
+		expect(scrollIntoView.mock.calls[0]?.[0]).toMatchObject({
+			block: "start",
+		});
+		expect(scrollIntoView.mock.calls[0]?.[0]).not.toHaveProperty("behavior");
+	});
+
+	it("jumps to a file when the PR loads with a matching URL fragment", async () => {
+		window.location.hash = "#2";
+
+		render(
+			<PrViewerShell
+				pr={fixturePr()}
+				status="ready"
+				paths={["packages/router/src/index.ts", "packages/router/src/util.ts"]}
+				patch={TWO_FILE_PATCH}
+			/>,
+		);
+
+		const fileHeader = screen.getByRole("button", {
+			name: /Mark packages\/router\/src\/util\.ts as viewed/,
+		});
+		const fileCard = document.getElementById("2");
+		expect(fileCard).toBeInstanceOf(HTMLElement);
+		expect(fileCard?.getAttribute("data-slot")).toBe("card");
+
+		await waitFor(() => {
+			expect(scrollIntoView).toHaveBeenCalledTimes(1);
+		});
+		expect(scrollIntoView.mock.instances[0]).toBe(fileCard);
+		expect(fileCard?.contains(fileHeader)).toBe(true);
+		expect(window.location.hash).toBe("#2");
 	});
 
 	it("isolates viewed state when navigating between PRs", () => {

@@ -7,7 +7,7 @@ index 1111111..2222222 100644
 +++ b/apps/web/src/routes/index.tsx
 @@ -1,5 +1,10 @@
  import { createFileRoute } from '@tanstack/react-router';
-+import { PastePrHome } from '../features/paste-pr/PastePrHome';
++import { PastePrHome } from '../features/paste-pr/components/PastePrHome';
 
 -export const Route = createFileRoute('/')({ component: () => <p>Welcome to TanStack Start</p> });
 +export const Route = createFileRoute('/')({ component: Home });

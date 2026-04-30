@@ -18,12 +18,12 @@ export function splitPatchFiles(patch: string): PatchFile[] {
 	return patch
 		.split(GIT_DIFF_SPLIT_RE)
 		.map((filePatch) => filePatch.trimStart())
-		.filter((filePatch) => filePatch.startsWith('diff --git '))
+		.filter((filePatch) => filePatch.startsWith("diff --git "))
 		.map((filePatch) => {
 			const match = /^diff --git a\/(.*?) b\/(.*)$/m.exec(filePatch);
 			return {
-				path: match?.[2] ?? 'unknown',
-				patch: filePatch.endsWith('\n') ? filePatch : `${filePatch}\n`,
+				path: match?.[2] ?? "unknown",
+				patch: filePatch.endsWith("\n") ? filePatch : `${filePatch}\n`,
 			};
 		});
 }
