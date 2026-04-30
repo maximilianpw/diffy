@@ -1,3 +1,4 @@
+import { useAuthActions, useConvexAuth } from '@convex-dev/auth/react';
 import { useState } from 'react';
 import { Eyebrow } from '#/components/section-header';
 import { Alert, AlertDescription } from '#/components/ui/alert';
@@ -12,6 +13,8 @@ type PastePrHomeProps = {
 };
 
 export function PastePrHome({ navigateToPr }: PastePrHomeProps) {
+	const { isAuthenticated, isLoading } = useConvexAuth();
+	const { signIn, signOut } = useAuthActions();
 	const [value, setValue] = useState('');
 	const [error, setError] = useState<string | null>(null);
 
@@ -19,6 +22,11 @@ export function PastePrHome({ navigateToPr }: PastePrHomeProps) {
 		event.preventDefault();
 
 		const path = getPrPathFromSubmission(value);
+		if (!isAuthenticated) {
+			setError('Sign in with GitHub before opening a pull request.');
+			return;
+		}
+
 		if (!path) {
 			setError('Paste a GitHub pull request URL.');
 			return;
@@ -39,6 +47,30 @@ export function PastePrHome({ navigateToPr }: PastePrHomeProps) {
 					</CardDescription>
 				</CardHeader>
 				<CardContent>
+					<div className="mb-4 flex items-center justify-between gap-3 rounded-md border bg-muted/30 px-3 py-2">
+						<p className="text-muted-foreground text-sm">
+							{isAuthenticated
+								? 'Signed in with GitHub. Tokens stay on the Convex backend.'
+								: 'Sign in with GitHub so Diffy can fetch pull request diffs.'}
+						</p>
+						{isAuthenticated ? (
+							<Button
+								type="button"
+								variant="outline"
+								onClick={() => void signOut()}
+							>
+								Sign out
+							</Button>
+						) : (
+							<Button
+								type="button"
+								onClick={() => void signIn('github')}
+								disabled={isLoading}
+							>
+								Sign in with GitHub
+							</Button>
+						)}
+					</div>
 					<form
 						aria-label="Open GitHub PR"
 						className="flex flex-col gap-3 sm:flex-row sm:items-end"
@@ -54,7 +86,12 @@ export function PastePrHome({ navigateToPr }: PastePrHomeProps) {
 								value={value}
 							/>
 						</div>
-						<Button type="submit">Open PR</Button>
+						<Button
+							type="submit"
+							disabled={!isAuthenticated || isLoading}
+						>
+							Open PR
+						</Button>
 					</form>
 					{error ? (
 						<Alert

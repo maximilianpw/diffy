@@ -16,8 +16,10 @@
 		"deploy": "bun run build && wrangler deploy"
 	},
 	"dependencies": {
+		"@auth/core": "^0.37.0",
 		"@base-ui/react": "^1.4.1",
 		"@cloudflare/vite-plugin": "^1.26.0",
+		"@convex-dev/auth": "^0.0.92",
 		"@convex-dev/react-query": "0.1.0",
 		"@diffy/shared": "workspace:*",
 		"@fontsource-variable/figtree": "^5.2.10",

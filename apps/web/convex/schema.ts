@@ -1,7 +1,19 @@
 import { defineSchema, defineTable } from 'convex/server';
 import { v } from 'convex/values';
+import { authTables } from '@convex-dev/auth/server';
 
 export default defineSchema({
+	...authTables,
+	users: defineTable({
+		name: v.optional(v.string()),
+		image: v.optional(v.string()),
+		email: v.optional(v.string()),
+		emailVerificationTime: v.optional(v.number()),
+		phone: v.optional(v.string()),
+		phoneVerificationTime: v.optional(v.number()),
+		isAnonymous: v.optional(v.boolean()),
+		githubAccessToken: v.optional(v.string()),
+	}).index('email', ['email']),
 	pullRequests: defineTable({
 		// Natural identity from GitHub
 		owner: v.string(),
@@ -27,6 +39,6 @@ export default defineSchema({
 		lastViewedAt: v.number(),
 		githubUpdatedAt: v.number(),
 	})
-		.index('by_pr', ['owner', 'repo', 'number'])
+		.index('by_owner_and_repo_and_number', ['owner', 'repo', 'number'])
 		.index('by_last_viewed', ['lastViewedAt']),
 });
