@@ -1,5 +1,4 @@
 import { Badge } from "#/components/ui/badge";
-import { cn } from "#/lib/utils";
 import type { Doc } from "../../../../convex/_generated/dataModel";
 import {
 	PullRequestStateBadgeVariant,
@@ -80,11 +79,7 @@ function MetaItem({
 
 function BranchChip({ children }: { children: React.ReactNode }) {
 	return (
-		<span
-			className={cn(
-				"inline-flex items-center rounded-md border border-border bg-muted/40 px-1.5 py-0.5 font-mono text-[11px] text-foreground",
-			)}
-		>
+		<span className="inline-flex items-center rounded-md border border-border bg-muted/40 px-1.5 py-0.5 font-mono text-[11px] text-foreground">
 			{children}
 		</span>
 	);

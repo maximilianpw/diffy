@@ -216,6 +216,9 @@ function getDescendantFilePaths(
 	return paths.filter((path) => path.startsWith(prefix));
 }
 
+// Couples to @pierre/trees row markup: data-item-section="decoration" on the
+// row's decoration cell, data-type="item" on the row, and data-item-path /
+// data-item-type on the row root. If trees is upgraded, re-verify these.
 function getClickedViewedToggle(event: MouseEvent): {
 	path: string;
 	type: "file" | "folder";

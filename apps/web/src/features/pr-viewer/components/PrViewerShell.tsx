@@ -44,31 +44,8 @@ export function PrViewerShell({
 	patch,
 	error,
 }: PrViewerShellProps) {
-	const viewerKey = pr ? `${pr.owner}/${pr.repo}#${pr.number}` : "empty";
-
-	return (
-		<PrViewerContent
-			key={viewerKey}
-			pr={pr}
-			status={status}
-			paths={paths}
-			patch={patch}
-			error={error}
-		/>
-	);
-}
-
-function PrViewerContent({
-	pr,
-	status,
-	paths,
-	patch,
-	error,
-}: PrViewerShellProps) {
 	const treeKey = paths.join("\0");
-	const { isViewed, setPathsViewed, toggle, viewedPaths } = useViewedFiles(
-		pr ?? { owner: "", repo: "", number: 0 },
-	);
+	const { isViewed, setPathsViewed, toggle, viewedPaths } = useViewedFiles(pr);
 
 	return (
 		<div className="grid min-h-[calc(100vh-3rem)] grid-cols-1 lg:grid-cols-[280px_1fr]">

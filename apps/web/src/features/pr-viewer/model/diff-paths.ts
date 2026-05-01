@@ -19,10 +19,10 @@ export function splitPatchFiles(patch: string): PatchFile[] {
 		.split(GIT_DIFF_SPLIT_RE)
 		.map((filePatch) => filePatch.trimStart())
 		.filter((filePatch) => filePatch.startsWith("diff --git "))
-		.map((filePatch) => {
+		.map((filePatch, index) => {
 			const match = /^diff --git a\/(.*?) b\/(.*)$/m.exec(filePatch);
 			return {
-				path: match?.[2] ?? "unknown",
+				path: match?.[2] ?? `unknown-${index}`,
 				patch: filePatch.endsWith("\n") ? filePatch : `${filePatch}\n`,
 			};
 		});

@@ -35,15 +35,24 @@ function persist(key: string, set: Set<string>): void {
 	}
 }
 
-export function useViewedFiles(pr: PrKey) {
-	const key = storageKey(pr);
-	const [viewed, setViewed] = useState<Set<string>>(() => load(key));
+export function useViewedFiles(pr: PrKey | null) {
+	const key = pr ? storageKey(pr) : null;
+	const [viewed, setViewed] = useState<Set<string>>(() =>
+		key ? load(key) : new Set(),
+	);
+	const [trackedKey, setTrackedKey] = useState(key);
+
+	if (trackedKey !== key) {
+		setTrackedKey(key);
+		setViewed(key ? load(key) : new Set());
+	}
 
 	const isViewed = useCallback((path: string) => viewed.has(path), [viewed]);
 	const viewedPaths = useMemo(() => [...viewed], [viewed]);
 
 	const toggle = useCallback(
 		(path: string) => {
+			if (key === null) return;
 			setViewed((current) => {
 				const next = new Set(current);
 				if (next.has(path)) next.delete(path);
@@ -57,6 +66,7 @@ export function useViewedFiles(pr: PrKey) {
 
 	const setPathsViewed = useCallback(
 		(paths: readonly string[], shouldBeViewed: boolean) => {
+			if (key === null) return;
 			setViewed((current) => {
 				const next = new Set(current);
 				for (const path of paths) {
