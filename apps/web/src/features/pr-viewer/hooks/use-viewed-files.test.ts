@@ -5,7 +5,7 @@ import { useViewedFiles } from "./use-viewed-files";
 const PR = { owner: "tanstack", repo: "router", number: 123 };
 
 afterEach(() => {
-	sessionStorage.clear();
+	localStorage.clear();
 });
 
 describe("useViewedFiles", () => {
@@ -43,11 +43,11 @@ describe("useViewedFiles", () => {
 		expect(result.current.isViewed("src/b.ts")).toBe(false);
 	});
 
-	it("persists viewed state to sessionStorage scoped per PR", () => {
+	it("persists viewed state to localStorage scoped per PR", () => {
 		const { result } = renderHook(() => useViewedFiles(PR));
 		act(() => result.current.toggle("src/a.ts"));
 
-		const stored = sessionStorage.getItem("diffy.viewed.tanstack/router#123");
+		const stored = localStorage.getItem("diffy.viewed.tanstack/router#123");
 		expect(stored).not.toBeNull();
 		expect(JSON.parse(stored ?? "[]")).toContain("src/a.ts");
 	});

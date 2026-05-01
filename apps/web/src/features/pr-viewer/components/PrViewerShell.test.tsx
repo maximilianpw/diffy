@@ -93,7 +93,7 @@ describe("PrViewerShell", () => {
 
 	beforeEach(() => {
 		window.location.hash = "";
-		sessionStorage.clear();
+		localStorage.clear();
 		scrollIntoView.mockReset();
 		Object.defineProperty(Element.prototype, "scrollIntoView", {
 			configurable: true,
@@ -298,7 +298,7 @@ describe("PrViewerShell", () => {
 	});
 
 	it("isolates viewed state when navigating between PRs", () => {
-		sessionStorage.clear();
+		localStorage.clear();
 
 		const prA = fixturePr({ number: 100 });
 		const prB = fixturePr({ number: 200 });

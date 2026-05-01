@@ -15,7 +15,7 @@ function storageKey({ owner, repo, number }: PrKey): string {
 function load(key: string): Set<string> {
 	if (typeof window === "undefined") return new Set();
 	try {
-		const raw = window.sessionStorage.getItem(key);
+		const raw = window.localStorage.getItem(key);
 		if (!raw) return new Set();
 		const parsed = JSON.parse(raw) as unknown;
 		return Array.isArray(parsed)
@@ -29,9 +29,9 @@ function load(key: string): Set<string> {
 function persist(key: string, set: Set<string>): void {
 	if (typeof window === "undefined") return;
 	try {
-		window.sessionStorage.setItem(key, JSON.stringify([...set]));
+		window.localStorage.setItem(key, JSON.stringify([...set]));
 	} catch {
-		// sessionStorage can be disabled or full; viewed-state is best-effort UX.
+		// localStorage can be disabled or full; viewed-state is best-effort UX.
 	}
 }
 
