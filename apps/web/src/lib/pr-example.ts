@@ -1,6 +1,6 @@
 export const previewFiles = [
 	{
-		path: 'apps/web/src/routes/index.tsx',
+		path: "apps/web/src/routes/index.tsx",
 		patch: `diff --git a/apps/web/src/routes/index.tsx b/apps/web/src/routes/index.tsx
 index 1111111..2222222 100644
 --- a/apps/web/src/routes/index.tsx
@@ -19,7 +19,7 @@ index 1111111..2222222 100644
 `,
 	},
 	{
-		path: 'packages/shared/src/pr-url.ts',
+		path: "packages/shared/src/pr-url.ts",
 		patch: `diff --git a/packages/shared/src/pr-url.ts b/packages/shared/src/pr-url.ts
 index 3333333..4444444 100644
 --- a/packages/shared/src/pr-url.ts
@@ -36,7 +36,7 @@ index 3333333..4444444 100644
 `,
 	},
 	{
-		path: 'apps/extension/entrypoints/content.ts',
+		path: "apps/extension/entrypoints/content.ts",
 		patch: `diff --git a/apps/extension/entrypoints/content.ts b/apps/extension/entrypoints/content.ts
 index 5555555..6666666 100644
 --- a/apps/extension/entrypoints/content.ts

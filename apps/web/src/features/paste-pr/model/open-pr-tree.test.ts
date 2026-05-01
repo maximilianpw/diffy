@@ -67,10 +67,7 @@ describe("buildOpenPrTree", () => {
 			pr({ owner: "acme", repo: "core", number: 11, title: "WIP" }),
 		]);
 
-		expect(paths).toEqual([
-			"acme/core/WIP (#10)",
-			"acme/core/WIP (#11)",
-		]);
+		expect(paths).toEqual(["acme/core/WIP (#10)", "acme/core/WIP (#11)"]);
 		expect(prByPath.get("acme/core/WIP (#10)")?.number).toBe(10);
 		expect(prByPath.get("acme/core/WIP (#11)")?.number).toBe(11);
 	});

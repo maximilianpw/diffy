@@ -1,4 +1,4 @@
-import { appPrPath, parseGithubPrUrl } from '@diffy/shared';
+import { appPrPath, parseGithubPrUrl } from "@diffy/shared";
 
 export function getPrPathFromSubmission(submission: string): string | null {
 	const ref = parseGithubPrUrl(submission);
