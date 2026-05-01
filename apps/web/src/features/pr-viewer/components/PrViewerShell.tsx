@@ -16,6 +16,7 @@ import {
 } from "../model/file-fragment";
 import { ChangedFilesTree } from "./ChangedFilesTree";
 import { FileCard } from "./FileCard";
+import { PrDiscussion } from "./PrDiscussion";
 import { PrSummaryCard } from "./PrSummaryCard";
 
 const diffWorkerHighlighterOptions = {
@@ -28,9 +29,11 @@ const diffWorkerPoolOptions = {
 } satisfies WorkerPoolOptions;
 
 type PrDoc = Doc<"pullRequests">;
+type PrCommentDoc = Doc<"pullRequestComments">;
 
 type PrViewerShellProps = {
 	pr: PrDoc | null;
+	comments?: PrCommentDoc[];
 	status: "importing" | "ready" | "error";
 	paths: string[];
 	patch: string | null;
@@ -39,6 +42,7 @@ type PrViewerShellProps = {
 
 export function PrViewerShell({
 	pr,
+	comments = [],
 	status,
 	paths,
 	patch,
@@ -62,6 +66,7 @@ export function PrViewerShell({
 				className="flex flex-col gap-6 px-6 py-8 lg:px-10"
 			>
 				{pr ? <PrSummaryCard pr={pr} /> : null}
+				{pr ? <PrDiscussion pr={pr} comments={comments} /> : null}
 
 				{status === "importing" ? (
 					<Card className="p-4 text-muted-foreground">

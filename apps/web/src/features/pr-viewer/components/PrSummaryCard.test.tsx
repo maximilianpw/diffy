@@ -14,6 +14,7 @@ function fixturePr(
 		repo: "router",
 		number: 123,
 		title: "Add resilient route matching",
+		body: null,
 		authorLogin: "tannerlinsley",
 		authorAvatarUrl: "https://example.com/avatar.png",
 		state: "merged",

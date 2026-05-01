@@ -22,6 +22,7 @@ export default defineSchema({
 
 		// Metadata snapshot (from GET /pulls/{n})
 		title: v.string(),
+		body: v.optional(v.union(v.string(), v.null())),
 		authorLogin: v.string(),
 		authorAvatarUrl: v.string(),
 		state: v.union(v.literal('open'), v.literal('closed'), v.literal('merged')),
@@ -38,7 +39,20 @@ export default defineSchema({
 		importedAt: v.number(),
 		lastViewedAt: v.number(),
 		githubUpdatedAt: v.number(),
+		discussionImportedAt: v.optional(v.number()),
 	})
 		.index('by_owner_and_repo_and_number', ['owner', 'repo', 'number'])
 		.index('by_last_viewed', ['lastViewedAt']),
+	pullRequestComments: defineTable({
+		pullRequestId: v.id('pullRequests'),
+		githubId: v.number(),
+		authorLogin: v.string(),
+		authorAvatarUrl: v.string(),
+		body: v.string(),
+		htmlUrl: v.string(),
+		createdAt: v.number(),
+		updatedAt: v.number(),
+	})
+		.index('by_pull_request_and_created_at', ['pullRequestId', 'createdAt'])
+		.index('by_pull_request_and_github_id', ['pullRequestId', 'githubId']),
 });

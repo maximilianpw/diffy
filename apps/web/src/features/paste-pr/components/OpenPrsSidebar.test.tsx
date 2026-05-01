@@ -37,6 +37,7 @@ function fixturePr(
 		_creationTime: 0,
 		authorLogin: "octocat",
 		authorAvatarUrl: "https://example.com/a.png",
+		body: null,
 		state: "open",
 		baseRef: "main",
 		headRef: "feat/x",

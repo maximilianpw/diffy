@@ -35,6 +35,7 @@ function fixturePr(
 		repo: "router",
 		number: 123,
 		title: "Add resilient route matching",
+		body: null,
 		authorLogin: "tannerlinsley",
 		authorAvatarUrl: "https://example.com/avatar.png",
 		state: "merged",
@@ -48,6 +49,24 @@ function fixturePr(
 		importedAt: new Date("2026-04-12T00:00:00Z").getTime(),
 		lastViewedAt: new Date("2026-04-12T00:00:00Z").getTime(),
 		githubUpdatedAt: new Date("2026-04-12T00:00:00Z").getTime(),
+		...overrides,
+	};
+}
+
+function fixtureComment(
+	overrides: Partial<Doc<"pullRequestComments">> = {},
+): Doc<"pullRequestComments"> {
+	return {
+		_id: "comment_test" as Doc<"pullRequestComments">["_id"],
+		_creationTime: 0,
+		pullRequestId: "pr_test" as Doc<"pullRequestComments">["pullRequestId"],
+		githubId: 456,
+		authorLogin: "tkdodo",
+		authorAvatarUrl: "https://example.com/commenter.png",
+		body: "Looks good after ~~rebasing~~ updating the tests.",
+		htmlUrl: "https://github.com/tanstack/router/pull/123#issuecomment-456",
+		createdAt: new Date("2026-04-13T00:00:00Z").getTime(),
+		updatedAt: new Date("2026-04-13T00:00:00Z").getTime(),
 		...overrides,
 	};
 }
@@ -128,6 +147,63 @@ describe("PrViewerShell", () => {
 		expect(
 			within(region).getByText("packages/router/src/util.ts"),
 		).toBeTruthy();
+	});
+
+	it("renders the PR body as GitHub-flavored markdown above the diff", () => {
+		render(
+			<PrViewerShell
+				pr={fixturePr({
+					body: "## Reviewer context\n\n- [x] Keeps route matching resilient",
+				})}
+				status="ready"
+				paths={["packages/router/src/index.ts"]}
+				patch={TWO_FILE_PATCH}
+			/>,
+		);
+
+		const region = screen.getByRole("region", { name: "Diff preview" });
+		const discussion = screen.getByRole("region", {
+			name: "Pull request discussion",
+		});
+		expect(
+			within(discussion).getByRole("article", {
+				name: /tannerlinsley opened this pull request/,
+			}),
+		).toBeTruthy();
+		expect(within(discussion).getByText("Author")).toBeTruthy();
+		expect(
+			within(region).getByRole("heading", { name: "Reviewer context" }),
+		).toBeTruthy();
+		expect(within(region).getByRole("checkbox")).toHaveProperty(
+			"checked",
+			true,
+		);
+		expect(
+			within(region).getAllByText("packages/router/src/index.ts").length,
+		).toBeGreaterThan(0);
+	});
+
+	it("renders top-level pull request comments as GitHub-flavored markdown", () => {
+		render(
+			<PrViewerShell
+				pr={fixturePr()}
+				comments={[fixtureComment()]}
+				status="ready"
+				paths={["packages/router/src/index.ts"]}
+				patch={TWO_FILE_PATCH}
+			/>,
+		);
+
+		const discussion = screen.getByRole("region", {
+			name: "Pull request discussion",
+		});
+		expect(within(discussion).getByText("tkdodo")).toBeTruthy();
+		expect(
+			within(discussion).getByRole("article", { name: /tkdodo commented/ }),
+		).toBeTruthy();
+		expect(within(discussion).getByText("Apr 13, 2026")).toBeTruthy();
+		expect(within(discussion).getByText("rebasing").tagName).toBe("DEL");
+		expect(within(discussion).getByText(/updating the tests/)).toBeTruthy();
 	});
 
 	it("marks a file as viewed when its checkbox is clicked, hiding the diff body", () => {
