@@ -4,13 +4,9 @@ import {
 	type WorkerPoolOptions,
 } from "@pierre/diffs/react";
 import DiffWorker from "@pierre/diffs/worker/worker.js?worker";
-import { themeToTreeStyles } from "@pierre/trees";
-import { FileTree, useFileTree } from "@pierre/trees/react";
-import vesper from "@shikijs/themes/vesper";
-import type { MouseEvent as ReactMouseEvent, ReactNode } from "react";
+import type { ReactNode } from "react";
 import { useEffect, useMemo } from "react";
 import { Card } from "#/components/ui/card";
-import { Separator } from "#/components/ui/separator";
 import type { Doc } from "../../../../convex/_generated/dataModel";
 import { useViewedFiles } from "../hooks/use-viewed-files";
 import { splitPatchFiles } from "../model/diff-paths";
@@ -18,10 +14,9 @@ import {
 	findFileIndexForFragment,
 	jumpToFileFragment,
 } from "../model/file-fragment";
+import { ChangedFilesTree } from "./ChangedFilesTree";
 import { FileCard } from "./FileCard";
 import { PrSummaryCard } from "./PrSummaryCard";
-
-const treeThemeStyles = themeToTreeStyles(vesper);
 
 const diffWorkerHighlighterOptions = {
 	theme: "vesper",
@@ -71,7 +66,7 @@ function PrViewerContent({
 	error,
 }: PrViewerShellProps) {
 	const treeKey = paths.join("\0");
-	const { isViewed, toggle, viewedPaths } = useViewedFiles(
+	const { isViewed, setPathsViewed, toggle, viewedPaths } = useViewedFiles(
 		pr ?? { owner: "", repo: "", number: 0 },
 	);
 
@@ -81,6 +76,7 @@ function PrViewerContent({
 				key={treeKey}
 				paths={paths}
 				viewedPaths={viewedPaths}
+				onSetPathsViewed={setPathsViewed}
 				onFileSelect={jumpToFileFragment}
 			/>
 
@@ -163,82 +159,4 @@ function DiffWorkerPoolProvider({ children }: { children: ReactNode }) {
 			{children}
 		</WorkerPoolContextProvider>
 	);
-}
-
-function ChangedFilesTree({
-	paths,
-	viewedPaths,
-	onFileSelect,
-}: {
-	paths: string[];
-	viewedPaths: readonly string[];
-	onFileSelect: (fileIndex: number) => void;
-}) {
-	const { model } = useFileTree({
-		paths,
-		viewedPaths,
-		initialExpansion: "open",
-		flattenEmptyDirectories: true,
-		stickyFolders: true,
-		search: true,
-		density: "relaxed",
-	});
-
-	function handleTreeClick(event: ReactMouseEvent<HTMLElement>) {
-		const clickedPath = getClickedTreeFilePath(event.nativeEvent);
-		const isPlainClick = !event.ctrlKey && !event.metaKey && !event.shiftKey;
-		const fileIndex = clickedPath == null ? -1 : paths.indexOf(clickedPath);
-
-		if (isPlainClick && fileIndex >= 0) {
-			onFileSelect(fileIndex);
-		}
-	}
-
-	return (
-		<aside
-			className="border-b bg-card lg:sticky lg:top-12 lg:self-start lg:border-r lg:border-b-0"
-			style={{ height: "calc(100vh - 3rem)" }}
-		>
-			<FileTree
-				model={model}
-				header={
-					<>
-						<div className="flex items-center justify-between px-4 py-3">
-							<span className="font-medium font-mono text-[11px] uppercase tracking-wider text-muted-foreground">
-								Changed files
-							</span>
-							<span className="rounded-full bg-muted px-2 py-0.5 font-mono text-[10px] tabular-nums text-muted-foreground">
-								{paths.length}
-							</span>
-						</div>
-						<Separator />
-					</>
-				}
-				className="h-full"
-				onClick={handleTreeClick}
-				style={{ height: "calc(100vh - 3rem)", ...treeThemeStyles }}
-			/>
-		</aside>
-	);
-}
-
-function getClickedTreeFilePath(event: MouseEvent): string | null {
-	const composedPath =
-		typeof event.composedPath === "function" ? event.composedPath() : [];
-
-	for (const target of composedPath) {
-		if (!(target instanceof HTMLElement)) continue;
-		if (target.dataset.itemType === "file") {
-			return target.dataset.itemPath ?? null;
-		}
-	}
-
-	if (event.target instanceof Element) {
-		return (
-			event.target.closest<HTMLElement>("[data-item-type='file']")?.dataset
-				.itemPath ?? null
-		);
-	}
-
-	return null;
 }

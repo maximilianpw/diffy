@@ -55,5 +55,20 @@ export function useViewedFiles(pr: PrKey) {
 		[key],
 	);
 
-	return { isViewed, toggle, viewedPaths };
+	const setPathsViewed = useCallback(
+		(paths: readonly string[], shouldBeViewed: boolean) => {
+			setViewed((current) => {
+				const next = new Set(current);
+				for (const path of paths) {
+					if (shouldBeViewed) next.add(path);
+					else next.delete(path);
+				}
+				persist(key, next);
+				return next;
+			});
+		},
+		[key],
+	);
+
+	return { isViewed, setPathsViewed, toggle, viewedPaths };
 }

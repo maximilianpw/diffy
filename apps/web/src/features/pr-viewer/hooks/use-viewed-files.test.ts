@@ -29,6 +29,20 @@ describe("useViewedFiles", () => {
 		expect(result.current.isViewed("src/a.ts")).toBe(false);
 	});
 
+	it("marks multiple files viewed or unviewed together", () => {
+		const { result } = renderHook(() => useViewedFiles(PR));
+
+		act(() => result.current.setPathsViewed(["src/a.ts", "src/b.ts"], true));
+
+		expect(result.current.isViewed("src/a.ts")).toBe(true);
+		expect(result.current.isViewed("src/b.ts")).toBe(true);
+
+		act(() => result.current.setPathsViewed(["src/a.ts", "src/b.ts"], false));
+
+		expect(result.current.isViewed("src/a.ts")).toBe(false);
+		expect(result.current.isViewed("src/b.ts")).toBe(false);
+	});
+
 	it("persists viewed state to sessionStorage scoped per PR", () => {
 		const { result } = renderHook(() => useViewedFiles(PR));
 		act(() => result.current.toggle("src/a.ts"));

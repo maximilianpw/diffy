@@ -63,6 +63,31 @@ async function findTreeFileRow(path: string) {
 	});
 }
 
+async function findTreeFolderRow(path: string) {
+	return waitFor(() => {
+		const tree = document.querySelector("file-tree-container");
+		expect(tree).toBeInstanceOf(HTMLElement);
+
+		const row = tree?.shadowRoot?.querySelector(
+			`[data-item-type="folder"][data-item-path="${path}"]`,
+		);
+		expect(row).toBeInstanceOf(HTMLElement);
+		return row as HTMLElement;
+	});
+}
+
+function getTreeViewedToggle(row: HTMLElement) {
+	const toggle = row.querySelector('[data-item-section="decoration"]');
+	expect(toggle).toBeInstanceOf(HTMLElement);
+	return toggle as HTMLElement;
+}
+
+function getTreeViewedToggleTitle(row: HTMLElement) {
+	return row
+		.querySelector('[data-item-section="decoration"] span')
+		?.getAttribute("title");
+}
+
 describe("PrViewerShell", () => {
 	const scrollIntoView = vi.fn();
 
@@ -146,6 +171,71 @@ describe("PrViewerShell", () => {
 
 		await waitFor(() => {
 			expect(treeRow.getAttribute("data-item-viewed")).toBe("true");
+		});
+	});
+
+	it("marks a file as viewed when its tree checkbox is clicked", async () => {
+		render(
+			<PrViewerShell
+				pr={fixturePr()}
+				status="ready"
+				paths={["packages/router/src/index.ts", "packages/router/src/util.ts"]}
+				patch={TWO_FILE_PATCH}
+			/>,
+		);
+
+		const treeRow = await findTreeFileRow("packages/router/src/index.ts");
+		const treeToggle = getTreeViewedToggle(treeRow);
+		const fileHeader = screen.getByRole("button", {
+			name: /Mark packages\/router\/src\/index\.ts as viewed/,
+		});
+		expect(getTreeViewedToggleTitle(treeRow)).toBe(
+			"Mark packages/router/src/index.ts as viewed",
+		);
+
+		fireEvent.click(treeToggle);
+
+		await waitFor(() => {
+			expect(treeRow.getAttribute("data-item-viewed")).toBe("true");
+			expect(getTreeViewedToggleTitle(treeRow)).toBe(
+				"Mark packages/router/src/index.ts as unviewed",
+			);
+			expect(fileHeader.getAttribute("aria-expanded")).toBe("false");
+		});
+		expect(window.location.hash).toBe("");
+		expect(scrollIntoView).not.toHaveBeenCalled();
+	});
+
+	it("marks all descendant files viewed when a tree folder checkbox is clicked", async () => {
+		render(
+			<PrViewerShell
+				pr={fixturePr()}
+				status="ready"
+				paths={["packages/router/src/index.ts", "packages/router/src/util.ts"]}
+				patch={TWO_FILE_PATCH}
+			/>,
+		);
+
+		const folderRow = await findTreeFolderRow("packages/router/src/");
+		const folderToggle = getTreeViewedToggle(folderRow);
+
+		fireEvent.click(folderToggle);
+
+		await waitFor(() => {
+			expect(
+				screen
+					.getByRole("button", {
+						name: /Mark packages\/router\/src\/index\.ts as viewed/,
+					})
+					.getAttribute("aria-expanded"),
+			).toBe("false");
+			expect(
+				screen
+					.getByRole("button", {
+						name: /Mark packages\/router\/src\/util\.ts as viewed/,
+					})
+					.getAttribute("aria-expanded"),
+			).toBe("false");
 		});
 	});
 
