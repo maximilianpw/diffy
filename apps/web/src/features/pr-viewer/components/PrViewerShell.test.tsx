@@ -68,6 +68,7 @@ describe("PrViewerShell", () => {
 
 	beforeEach(() => {
 		window.location.hash = "";
+		sessionStorage.clear();
 		scrollIntoView.mockReset();
 		Object.defineProperty(Element.prototype, "scrollIntoView", {
 			configurable: true,
@@ -122,6 +123,30 @@ describe("PrViewerShell", () => {
 		fireEvent.click(fileHeader);
 
 		expect(fileHeader.getAttribute("aria-expanded")).toBe("false");
+	});
+
+	it("greys out a tree row when its file is marked as viewed", async () => {
+		render(
+			<PrViewerShell
+				pr={fixturePr()}
+				status="ready"
+				paths={["packages/router/src/index.ts", "packages/router/src/util.ts"]}
+				patch={TWO_FILE_PATCH}
+			/>,
+		);
+
+		const treeRow = await findTreeFileRow("packages/router/src/index.ts");
+		expect(treeRow.getAttribute("data-item-viewed")).toBeNull();
+
+		fireEvent.click(
+			screen.getByRole("button", {
+				name: /Mark packages\/router\/src\/index\.ts as viewed/,
+			}),
+		);
+
+		await waitFor(() => {
+			expect(treeRow.getAttribute("data-item-viewed")).toBe("true");
+		});
 	});
 
 	it("updates the URL fragment and jumps to a file when its tree row is clicked", async () => {

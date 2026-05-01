@@ -49,13 +49,38 @@ export function PrViewerShell({
 	patch,
 	error,
 }: PrViewerShellProps) {
+	const viewerKey = pr ? `${pr.owner}/${pr.repo}#${pr.number}` : "empty";
+
+	return (
+		<PrViewerContent
+			key={viewerKey}
+			pr={pr}
+			status={status}
+			paths={paths}
+			patch={patch}
+			error={error}
+		/>
+	);
+}
+
+function PrViewerContent({
+	pr,
+	status,
+	paths,
+	patch,
+	error,
+}: PrViewerShellProps) {
 	const treeKey = paths.join("\0");
+	const { isViewed, toggle, viewedPaths } = useViewedFiles(
+		pr ?? { owner: "", repo: "", number: 0 },
+	);
 
 	return (
 		<div className="grid min-h-[calc(100vh-3rem)] grid-cols-1 lg:grid-cols-[280px_1fr]">
 			<ChangedFilesTree
 				key={treeKey}
 				paths={paths}
+				viewedPaths={viewedPaths}
 				onFileSelect={jumpToFileFragment}
 			/>
 
@@ -75,10 +100,10 @@ export function PrViewerShell({
 					</Card>
 				) : pr && patch ? (
 					<DiffStack
-						key={`${pr.owner}/${pr.repo}#${pr.number}`}
-						pr={pr}
 						patch={patch}
 						paths={paths}
+						isViewed={isViewed}
+						onToggleViewed={toggle}
 					/>
 				) : (
 					<Card className="p-4 text-muted-foreground">
@@ -91,20 +116,17 @@ export function PrViewerShell({
 }
 
 function DiffStack({
-	pr,
 	patch,
 	paths,
+	isViewed,
+	onToggleViewed,
 }: {
-	pr: PrDoc;
 	patch: string;
 	paths: string[];
+	isViewed: (path: string) => boolean;
+	onToggleViewed: (path: string) => void;
 }) {
 	const patchFiles = useMemo(() => splitPatchFiles(patch), [patch]);
-	const { isViewed, toggle } = useViewedFiles({
-		owner: pr.owner,
-		repo: pr.repo,
-		number: pr.number,
-	});
 
 	useEffect(() => {
 		const fileIndex = findFileIndexForFragment(patchFiles.length);
@@ -122,7 +144,7 @@ function DiffStack({
 						path={file.path}
 						patch={file.patch}
 						viewed={isViewed(file.path)}
-						onToggleViewed={() => toggle(file.path)}
+						onToggleViewed={() => onToggleViewed(file.path)}
 					/>
 				))}
 			</div>
@@ -145,13 +167,16 @@ function DiffWorkerPoolProvider({ children }: { children: ReactNode }) {
 
 function ChangedFilesTree({
 	paths,
+	viewedPaths,
 	onFileSelect,
 }: {
 	paths: string[];
+	viewedPaths: readonly string[];
 	onFileSelect: (fileIndex: number) => void;
 }) {
 	const { model } = useFileTree({
 		paths,
+		viewedPaths,
 		initialExpansion: "open",
 		flattenEmptyDirectories: true,
 		stickyFolders: true,

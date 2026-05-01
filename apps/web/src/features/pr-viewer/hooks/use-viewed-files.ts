@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 
 type PrKey = {
 	owner: string;
@@ -40,6 +40,7 @@ export function useViewedFiles(pr: PrKey) {
 	const [viewed, setViewed] = useState<Set<string>>(() => load(key));
 
 	const isViewed = useCallback((path: string) => viewed.has(path), [viewed]);
+	const viewedPaths = useMemo(() => [...viewed], [viewed]);
 
 	const toggle = useCallback(
 		(path: string) => {
@@ -54,5 +55,5 @@ export function useViewedFiles(pr: PrKey) {
 		[key],
 	);
 
-	return { isViewed, toggle };
+	return { isViewed, toggle, viewedPaths };
 }
