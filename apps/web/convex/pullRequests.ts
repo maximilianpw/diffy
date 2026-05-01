@@ -1,4 +1,4 @@
-import { v } from 'convex/values';
+import { ConvexError, v } from 'convex/values';
 import { getAuthUserId } from '@convex-dev/auth/server';
 import type { Id } from './_generated/dataModel';
 import { internal } from './_generated/api';
@@ -12,6 +12,7 @@ import {
 	type MutationCtx,
 	type QueryCtx,
 } from './_generated/server';
+import { getGitHubFetchError } from './githubApiErrors';
 
 const GITHUB_API = 'https://api.github.com';
 
@@ -97,10 +98,22 @@ export const importPr = action({
 		]);
 
 		if (!metaRes.ok) {
-			throw new Error(`GitHub PR metadata fetch failed: ${metaRes.status} ${await metaRes.text()}`);
+			throw new ConvexError(
+				getGitHubFetchError({
+					resource: 'PR metadata',
+					status: metaRes.status,
+					body: await metaRes.text(),
+				}),
+			);
 		}
 		if (!diffRes.ok) {
-			throw new Error(`GitHub PR diff fetch failed: ${diffRes.status} ${await diffRes.text()}`);
+			throw new ConvexError(
+				getGitHubFetchError({
+					resource: 'PR diff',
+					status: diffRes.status,
+					body: await diffRes.text(),
+				}),
+			);
 		}
 
 		const meta = (await metaRes.json()) as GitHubPrMeta;

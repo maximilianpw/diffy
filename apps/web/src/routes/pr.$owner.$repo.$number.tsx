@@ -5,6 +5,7 @@ import { Crumb, CrumbLink, CrumbSeparator, TopBar } from "#/components/top-bar";
 import { api } from "../../convex/_generated/api";
 import { PrViewerShell } from "../features/pr-viewer/components/PrViewerShell";
 import { getChangedPathsFromPatch } from "../features/pr-viewer/model/diff-paths";
+import { getImportErrorMessage } from "../features/pr-viewer/model/import-error-message";
 
 export const Route = createFileRoute("/pr/$owner/$repo/$number")({
 	component: PrRoute,
@@ -48,11 +49,7 @@ function PrRouteForPullRequest({
 
 		setImportStarted(true);
 		void importPr({ owner, repo, number: prNumber }).catch((cause) => {
-			setError(
-				cause instanceof Error
-					? cause.message
-					: "Could not import pull request.",
-			);
+			setError(getImportErrorMessage(cause));
 		});
 	}, [importPr, importStarted, owner, pr, prNumber, repo]);
 
