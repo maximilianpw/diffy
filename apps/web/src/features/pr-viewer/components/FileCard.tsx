@@ -67,11 +67,7 @@ export function FileCard({
 			</button>
 			{viewed ? null : (
 				<div id={bodyId}>
-					<PatchDiff
-						patch={patch}
-						options={{ theme: "vesper" }}
-						disableWorkerPool
-					/>
+					<PatchDiff patch={patch} options={{ theme: "vesper" }} />
 				</div>
 			)}
 		</Card>

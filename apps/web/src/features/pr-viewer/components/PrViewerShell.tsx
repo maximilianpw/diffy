@@ -1,7 +1,13 @@
+import {
+	type WorkerInitializationRenderOptions,
+	WorkerPoolContextProvider,
+	type WorkerPoolOptions,
+} from "@pierre/diffs/react";
+import DiffWorker from "@pierre/diffs/worker/worker.js?worker";
 import { themeToTreeStyles } from "@pierre/trees";
 import { FileTree, useFileTree } from "@pierre/trees/react";
 import vesper from "@shikijs/themes/vesper";
-import type { MouseEvent as ReactMouseEvent } from "react";
+import type { MouseEvent as ReactMouseEvent, ReactNode } from "react";
 import { useEffect, useMemo } from "react";
 import { Card } from "#/components/ui/card";
 import { Separator } from "#/components/ui/separator";
@@ -16,6 +22,15 @@ import { FileCard } from "./FileCard";
 import { PrSummaryCard } from "./PrSummaryCard";
 
 const treeThemeStyles = themeToTreeStyles(vesper);
+
+const diffWorkerHighlighterOptions = {
+	theme: "vesper",
+} satisfies WorkerInitializationRenderOptions;
+
+const diffWorkerPoolOptions = {
+	workerFactory: () => new DiffWorker(),
+	poolSize: 4,
+} satisfies WorkerPoolOptions;
 
 type PrDoc = Doc<"pullRequests">;
 
@@ -97,19 +112,34 @@ function DiffStack({
 	}, [patchFiles.length]);
 
 	return (
-		<div className="flex flex-col gap-4">
-			<div className="sr-only">{paths.join("\n")}</div>
-			{patchFiles.map((file, fileIndex) => (
-				<FileCard
-					key={file.path}
-					fileIndex={fileIndex}
-					path={file.path}
-					patch={file.patch}
-					viewed={isViewed(file.path)}
-					onToggleViewed={() => toggle(file.path)}
-				/>
-			))}
-		</div>
+		<DiffWorkerPoolProvider>
+			<div className="flex flex-col gap-4">
+				<div className="sr-only">{paths.join("\n")}</div>
+				{patchFiles.map((file, fileIndex) => (
+					<FileCard
+						key={file.path}
+						fileIndex={fileIndex}
+						path={file.path}
+						patch={file.patch}
+						viewed={isViewed(file.path)}
+						onToggleViewed={() => toggle(file.path)}
+					/>
+				))}
+			</div>
+		</DiffWorkerPoolProvider>
+	);
+}
+
+function DiffWorkerPoolProvider({ children }: { children: ReactNode }) {
+	if (typeof Worker === "undefined") return children;
+
+	return (
+		<WorkerPoolContextProvider
+			poolOptions={diffWorkerPoolOptions}
+			highlighterOptions={diffWorkerHighlighterOptions}
+		>
+			{children}
+		</WorkerPoolContextProvider>
 	);
 }
 
