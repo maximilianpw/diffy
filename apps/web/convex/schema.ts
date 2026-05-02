@@ -1,6 +1,13 @@
 import { defineSchema, defineTable } from 'convex/server';
 import { v } from 'convex/values';
 import { authTables } from '@convex-dev/auth/server';
+import { PullRequestState } from '@diffy/shared';
+
+const pullRequestStateValidator = v.union(
+	v.literal(PullRequestState.Open),
+	v.literal(PullRequestState.Closed),
+	v.literal(PullRequestState.Merged),
+);
 
 export default defineSchema({
 	...authTables,
@@ -25,7 +32,7 @@ export default defineSchema({
 		body: v.optional(v.union(v.string(), v.null())),
 		authorLogin: v.string(),
 		authorAvatarUrl: v.string(),
-		state: v.union(v.literal('open'), v.literal('closed'), v.literal('merged')),
+		state: pullRequestStateValidator,
 		baseRef: v.string(),
 		headRef: v.string(),
 		baseSha: v.string(),
@@ -39,10 +46,31 @@ export default defineSchema({
 		importedAt: v.number(),
 		lastViewedAt: v.number(),
 		githubUpdatedAt: v.number(),
+		latestVersionId: v.optional(v.id('pullRequestVersions')),
+		latestVersionNumber: v.optional(v.number()),
 		discussionImportedAt: v.optional(v.number()),
 	})
 		.index('by_owner_and_repo_and_number', ['owner', 'repo', 'number'])
 		.index('by_last_viewed', ['lastViewedAt']),
+	pullRequestVersions: defineTable({
+		pullRequestId: v.id('pullRequests'),
+		versionNumber: v.number(),
+		baseRef: v.string(),
+		headRef: v.string(),
+		baseSha: v.string(),
+		headSha: v.string(),
+		diffStorageId: v.id('_storage'),
+		diffByteSize: v.number(),
+		githubUpdatedAt: v.number(),
+		importedAt: v.number(),
+	})
+		.index('by_pull_request_and_version', ['pullRequestId', 'versionNumber'])
+		.index('by_pull_request_and_diff_identity', [
+			'pullRequestId',
+			'baseSha',
+			'headSha',
+		])
+		.index('by_pull_request_and_imported_at', ['pullRequestId', 'importedAt']),
 	pullRequestComments: defineTable({
 		pullRequestId: v.id('pullRequests'),
 		githubId: v.number(),

@@ -6,8 +6,9 @@ import {
 	within,
 } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { Doc } from "../../../../convex/_generated/dataModel";
-import { PrViewerShell } from "./PrViewerShell";
+import type { Doc } from "../../../../../convex/_generated/dataModel";
+import { PullRequestState } from "../../model/pull-request.types";
+import { PrViewerShell } from ".";
 
 const TWO_FILE_PATCH = `diff --git a/packages/router/src/index.ts b/packages/router/src/index.ts
 index 1111111..2222222 100644
@@ -38,7 +39,7 @@ function fixturePr(
 		body: null,
 		authorLogin: "tannerlinsley",
 		authorAvatarUrl: "https://example.com/avatar.png",
-		state: "merged",
+		state: PullRequestState.Merged,
 		baseRef: "main",
 		headRef: "feat/resilient-matching",
 		baseSha: "aaa",
@@ -204,6 +205,62 @@ describe("PrViewerShell", () => {
 		expect(within(discussion).getByText("Apr 13, 2026")).toBeTruthy();
 		expect(within(discussion).getByText("rebasing").tagName).toBe("DEL");
 		expect(within(discussion).getByText(/updating the tests/)).toBeTruthy();
+	});
+
+	it("offers Update without a Pause control when a newer PR version is available", () => {
+		const onApplyUpdate = vi.fn();
+		const onToggleAutoCheck = vi.fn();
+
+		render(
+			<PrViewerShell
+				pr={fixturePr({ state: PullRequestState.Open })}
+				status="ready"
+				paths={["packages/router/src/index.ts"]}
+				patch={TWO_FILE_PATCH}
+				updateCheck={{
+					status: "available",
+					autoCheckEnabled: true,
+					onApplyUpdate,
+					onToggleAutoCheck,
+				}}
+			/>,
+		);
+
+		expect(screen.getByText("Updates available")).toBeTruthy();
+
+		fireEvent.click(screen.getByRole("button", { name: "Update" }));
+
+		expect(onApplyUpdate).toHaveBeenCalledTimes(1);
+		expect(screen.queryByRole("button", { name: "Pause checks" })).toBeNull();
+		expect(onToggleAutoCheck).not.toHaveBeenCalled();
+	});
+
+	it("shows Pause and the last-checked time while idle", () => {
+		const onApplyUpdate = vi.fn();
+		const onToggleAutoCheck = vi.fn();
+		const lastCheckedAt = new Date("2026-04-12T13:45:00Z").getTime();
+
+		render(
+			<PrViewerShell
+				pr={fixturePr({ state: PullRequestState.Open })}
+				status="ready"
+				paths={["packages/router/src/index.ts"]}
+				patch={TWO_FILE_PATCH}
+				updateCheck={{
+					status: "idle",
+					autoCheckEnabled: true,
+					lastCheckedAt,
+					onApplyUpdate,
+					onToggleAutoCheck,
+				}}
+			/>,
+		);
+
+		fireEvent.click(screen.getByRole("button", { name: "Pause checks" }));
+
+		expect(onToggleAutoCheck).toHaveBeenCalledTimes(1);
+		expect(onApplyUpdate).not.toHaveBeenCalled();
+		expect(screen.getByText(/Last checked/)).toBeTruthy();
 	});
 
 	it("marks a file as viewed when its checkbox is clicked, hiding the diff body", () => {

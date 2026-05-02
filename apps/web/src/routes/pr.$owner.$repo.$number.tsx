@@ -1,12 +1,15 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useAction, useQuery } from "convex/react";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Crumb, CrumbLink, CrumbSeparator, TopBar } from "#/components/top-bar";
+import type { PrUpdateCheck } from "#/features/pr-viewer/components/PrViewerShell";
 import { api } from "../../convex/_generated/api";
 import { PrViewerShell } from "../features/pr-viewer/components/PrViewerShell";
+import { usePrUpdatePolling } from "../features/pr-viewer/hooks/use-pr-update-polling";
 import { getChangedPathsFromPatch } from "../features/pr-viewer/model/diff-paths";
 import { shouldBackfillDiscussion } from "../features/pr-viewer/model/discussion-backfill";
 import { getImportErrorMessage } from "../features/pr-viewer/model/import-error-message";
+import { PullRequestState } from "../features/pr-viewer/model/pull-request.types";
 
 export const Route = createFileRoute("/pr/$owner/$repo/$number")({
 	component: PrRoute,
@@ -37,6 +40,7 @@ function PrRouteForPullRequest({
 	const prNumber = Number(number);
 	const importPr = useAction(api.pullRequests.importPr);
 	const importDiscussion = useAction(api.pullRequests.importDiscussion);
+	const checkForUpdates = useAction(api.pullRequests.checkForUpdates);
 	const pr = useQuery(api.pullRequests.getByPr, {
 		owner,
 		repo,
@@ -50,6 +54,16 @@ function PrRouteForPullRequest({
 	const [error, setError] = useState<string | null>(null);
 	const [importStarted, setImportStarted] = useState(false);
 	const [discussionImportStarted, setDiscussionImportStarted] = useState(false);
+	const [isApplyingUpdate, setIsApplyingUpdate] = useState(false);
+
+	const polling = usePrUpdatePolling({
+		prState: pr?.state,
+		owner,
+		repo,
+		number: prNumber,
+		checkForUpdates,
+		isApplyingUpdate,
+	});
 
 	useEffect(() => {
 		if (pr !== null || importStarted) return;
@@ -102,8 +116,35 @@ function PrRouteForPullRequest({
 		};
 	}, [pr?.diffUrl]);
 
+	const applyUpdate = useCallback(async () => {
+		setIsApplyingUpdate(true);
+		setError(null);
+		try {
+			await importPr({ owner, repo, number: prNumber });
+			polling.clearUpdatesAvailable();
+			polling.clearError();
+		} catch (cause) {
+			setError(getImportErrorMessage(cause));
+		} finally {
+			setIsApplyingUpdate(false);
+		}
+	}, [importPr, owner, polling, prNumber, repo]);
+
+	const onApplyUpdate = useCallback(() => void applyUpdate(), [applyUpdate]);
+
 	const status = error ? "error" : patch ? "ready" : "importing";
 	const paths = patch ? getChangedPathsFromPatch(patch) : [];
+	const updateCheck: PrUpdateCheck | undefined =
+		pr?.state === PullRequestState.Open
+			? {
+					status: polling.status,
+					autoCheckEnabled: polling.autoCheckEnabled,
+					error: polling.error,
+					lastCheckedAt: polling.lastCheckedAt,
+					onApplyUpdate,
+					onToggleAutoCheck: polling.toggleAutoCheck,
+				}
+			: undefined;
 
 	return (
 		<>
@@ -126,6 +167,7 @@ function PrRouteForPullRequest({
 				paths={paths}
 				patch={patch}
 				error={error}
+				updateCheck={updateCheck}
 			/>
 		</>
 	);

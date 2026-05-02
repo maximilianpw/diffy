@@ -1,15 +1,18 @@
-import type { Doc } from "../../../../convex/_generated/dataModel";
+import { PullRequestState } from "@diffy/shared";
 
-export type PullRequestState = Doc<"pullRequests">["state"];
+export { PullRequestState };
 
-export enum PullRequestStateLabel {
-	open = "Open",
-	closed = "Closed",
-	merged = "Merged",
-}
+export const PullRequestStateLabel: Record<PullRequestState, string> = {
+	[PullRequestState.Open]: "Open",
+	[PullRequestState.Closed]: "Closed",
+	[PullRequestState.Merged]: "Merged",
+};
 
-export enum PullRequestStateBadgeVariant {
-	open = "default",
-	closed = "outline",
-	merged = "secondary",
-}
+export const PullRequestStateBadgeVariant: Record<
+	PullRequestState,
+	"default" | "outline" | "secondary"
+> = {
+	[PullRequestState.Open]: "default",
+	[PullRequestState.Closed]: "outline",
+	[PullRequestState.Merged]: "secondary",
+};

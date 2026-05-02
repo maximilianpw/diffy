@@ -63,4 +63,17 @@ describe("useViewedFiles", () => {
 		expect(a.current.isViewed("src/a.ts")).toBe(true);
 		expect(b.current.isViewed("src/a.ts")).toBe(false);
 	});
+
+	it("isolates viewed sets across PR versions", () => {
+		const { result, rerender } = renderHook(
+			({ latestVersionNumber }) =>
+				useViewedFiles({ ...PR, latestVersionNumber }),
+			{ initialProps: { latestVersionNumber: 1 } },
+		);
+
+		act(() => result.current.toggle("src/a.ts"));
+		rerender({ latestVersionNumber: 2 });
+
+		expect(result.current.isViewed("src/a.ts")).toBe(false);
+	});
 });

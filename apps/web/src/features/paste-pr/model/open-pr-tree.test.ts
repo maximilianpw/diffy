@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { Doc } from "../../../../convex/_generated/dataModel";
+import { PullRequestState } from "../../pr-viewer/model/pull-request.types";
 import { buildOpenPrTree } from "./open-pr-tree";
 
 function pr(
@@ -16,7 +17,7 @@ function pr(
 		authorLogin: "octocat",
 		authorAvatarUrl: "https://example.com/a.png",
 		body: null,
-		state: "open",
+		state: PullRequestState.Open,
 		baseRef: "main",
 		headRef: "feat/x",
 		baseSha: "a",

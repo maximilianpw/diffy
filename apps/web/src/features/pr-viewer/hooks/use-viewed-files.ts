@@ -4,12 +4,22 @@ type PrKey = {
 	owner: string;
 	repo: string;
 	number: number;
+	latestVersionNumber?: number;
 };
 
 const STORAGE_PREFIX = "diffy.viewed.";
 
-function storageKey({ owner, repo, number }: PrKey): string {
-	return `${STORAGE_PREFIX}${owner}/${repo}#${number}`;
+// latestVersionNumber only bumps when (baseSha, headSha) change, so
+// discussion-only updates preserve the user's viewed marks.
+function storageKey({
+	owner,
+	repo,
+	number,
+	latestVersionNumber,
+}: PrKey): string {
+	const versionSuffix =
+		typeof latestVersionNumber === "number" ? `@v${latestVersionNumber}` : "";
+	return `${STORAGE_PREFIX}${owner}/${repo}#${number}${versionSuffix}`;
 }
 
 function load(key: string): Set<string> {

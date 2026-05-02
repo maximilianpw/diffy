@@ -1,7 +1,7 @@
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import type { Doc } from "../../../../convex/_generated/dataModel";
-import type { PullRequestState } from "../model/pull-request.types";
+import { PullRequestState } from "../model/pull-request.types";
 import { PrSummaryCard } from "./PrSummaryCard";
 
 function fixturePr(
@@ -17,7 +17,7 @@ function fixturePr(
 		body: null,
 		authorLogin: "tannerlinsley",
 		authorAvatarUrl: "https://example.com/avatar.png",
-		state: "merged",
+		state: PullRequestState.Merged,
 		baseRef: "main",
 		headRef: "feat/resilient-matching",
 		baseSha: "aaa",
@@ -33,9 +33,9 @@ function fixturePr(
 }
 
 const stateLabels = [
-	["open", "Open"],
-	["closed", "Closed"],
-	["merged", "Merged"],
+	[PullRequestState.Open, "Open"],
+	[PullRequestState.Closed, "Closed"],
+	[PullRequestState.Merged, "Merged"],
 ] as const satisfies ReadonlyArray<readonly [PullRequestState, string]>;
 
 describe("PrSummaryCard", () => {
@@ -43,5 +43,11 @@ describe("PrSummaryCard", () => {
 		render(<PrSummaryCard pr={fixturePr({ state })} />);
 
 		expect(screen.getByText(label)).toBeTruthy();
+	});
+
+	it("shows the latest stored PR version when available", () => {
+		render(<PrSummaryCard pr={fixturePr({ latestVersionNumber: 2 })} />);
+
+		expect(screen.getByText("v2")).toBeTruthy();
 	});
 });

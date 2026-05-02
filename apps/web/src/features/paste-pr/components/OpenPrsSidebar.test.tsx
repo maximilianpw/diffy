@@ -1,6 +1,7 @@
 import { render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { Doc } from "../../../../convex/_generated/dataModel";
+import { PullRequestState } from "../../pr-viewer/model/pull-request.types";
 import { OpenPrsSidebar } from "./OpenPrsSidebar";
 
 const authState = vi.hoisted(() => ({
@@ -38,7 +39,7 @@ function fixturePr(
 		authorLogin: "octocat",
 		authorAvatarUrl: "https://example.com/a.png",
 		body: null,
-		state: "open",
+		state: PullRequestState.Open,
 		baseRef: "main",
 		headRef: "feat/x",
 		baseSha: "a",

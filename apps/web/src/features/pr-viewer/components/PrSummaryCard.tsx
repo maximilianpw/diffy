@@ -50,6 +50,13 @@ export function PrSummaryCard({ pr }: PrSummaryCardProps) {
 					/>
 					<span className="text-foreground">{pr.authorLogin}</span>
 				</MetaItem>
+				{pr.latestVersionNumber ? (
+					<MetaItem label="Version">
+						<span className="text-foreground font-mono tabular-nums">
+							v{pr.latestVersionNumber}
+						</span>
+					</MetaItem>
+				) : null}
 				<MetaItem label="Imported">
 					<span className="text-foreground tabular-nums">
 						{dateFormatter.format(pr.importedAt)}
