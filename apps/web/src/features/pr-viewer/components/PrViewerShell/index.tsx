@@ -8,6 +8,8 @@ import { PrSummaryCard } from "../PrSummaryCard";
 import { DiffStack } from "./DiffStack";
 import { type PrUpdateCheck, PrUpdateNotice } from "./PrUpdateNotice";
 
+export type { PrUpdateCheck } from "./PrUpdateNotice";
+
 type PrDoc = Doc<"pullRequests">;
 type PrCommentDoc = Doc<"pullRequestComments">;
 

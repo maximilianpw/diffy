@@ -9,6 +9,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { Doc } from "../../../../../convex/_generated/dataModel";
 import { PullRequestState } from "../../model/pull-request.types";
 import { PrViewerShell } from ".";
+import { PrUpdateCheckStatus } from "./pr-update-notice-copy";
 
 const TWO_FILE_PATCH = `diff --git a/packages/router/src/index.ts b/packages/router/src/index.ts
 index 1111111..2222222 100644
@@ -218,7 +219,7 @@ describe("PrViewerShell", () => {
 				paths={["packages/router/src/index.ts"]}
 				patch={TWO_FILE_PATCH}
 				updateCheck={{
-					status: "available",
+					status: PrUpdateCheckStatus.Available,
 					autoCheckEnabled: true,
 					onApplyUpdate,
 					onToggleAutoCheck,
@@ -247,7 +248,7 @@ describe("PrViewerShell", () => {
 				paths={["packages/router/src/index.ts"]}
 				patch={TWO_FILE_PATCH}
 				updateCheck={{
-					status: "idle",
+					status: PrUpdateCheckStatus.Idle,
 					autoCheckEnabled: true,
 					lastCheckedAt,
 					onApplyUpdate,

@@ -12,7 +12,8 @@
 		"test": "vitest run",
 		"format": "biome format",
 		"lint": "biome lint",
-		"check": "biome check",
+		"typecheck": "tsc --noEmit",
+		"check": "biome check && bun run typecheck",
 		"deploy": "bun run build && wrangler deploy"
 	},
 	"dependencies": {
