@@ -1,13 +1,10 @@
 import { useConvexAuth } from "@convex-dev/auth/react";
 import { themeToTreeStyles } from "@pierre/trees";
-import {
-	FileTree,
-	useFileTree,
-	useFileTreeSelection,
-} from "@pierre/trees/react";
+import { FileTree, useFileTree } from "@pierre/trees/react";
 import vesper from "@shikijs/themes/vesper";
 import { useMutation, useQuery } from "convex/react";
-import { useEffect, useMemo, useRef } from "react";
+import type { MouseEvent as ReactMouseEvent } from "react";
+import { useMemo } from "react";
 import { Badge } from "#/components/ui/badge";
 import { Card } from "#/components/ui/card";
 import { Separator } from "#/components/ui/separator";
@@ -104,24 +101,41 @@ function OpenPrTree({
 		},
 	});
 
-	const selectedPaths = useFileTreeSelection(model);
-	const lastNavigatedPathRef = useRef<string | null>(null);
-	useEffect(() => {
-		for (const p of selectedPaths) {
-			const entry = prByPath.get(p);
-			if (entry && lastNavigatedPathRef.current !== p) {
-				lastNavigatedPathRef.current = p;
-				onSelect(entry);
-				return;
-			}
-		}
-	}, [selectedPaths, prByPath, onSelect]);
+	function handleClick(event: ReactMouseEvent<HTMLElement>) {
+		const clickedPath = getClickedFilePath(event.nativeEvent);
+		if (clickedPath == null) return;
+
+		const entry = prByPath.get(clickedPath);
+		if (entry) onSelect(entry);
+	}
 
 	return (
 		<FileTree
 			model={model}
 			className="h-full"
+			onClick={handleClick}
 			style={{ height: "calc(100vh - 6rem)", ...treeThemeStyles }}
 		/>
 	);
+}
+
+function getClickedFilePath(event: MouseEvent): string | null {
+	const composedPath =
+		typeof event.composedPath === "function" ? event.composedPath() : [];
+
+	for (const target of composedPath) {
+		if (!(target instanceof HTMLElement)) continue;
+		if (target.dataset.itemType === "file") {
+			return target.dataset.itemPath ?? null;
+		}
+	}
+
+	if (event.target instanceof Element) {
+		return (
+			event.target.closest<HTMLElement>("[data-item-type='file']")?.dataset
+				.itemPath ?? null
+		);
+	}
+
+	return null;
 }

@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { Doc } from "../../../../convex/_generated/dataModel";
 import { PullRequestState } from "../../pr-viewer/model/pull-request.types";
@@ -13,6 +13,10 @@ const queryState = vi.hoisted(() => ({
 	openPrs: [] as Doc<"pullRequests">[] | undefined,
 }));
 
+const mutationState = vi.hoisted(() => ({
+	touchPr: vi.fn(async () => null),
+}));
+
 vi.mock("@convex-dev/auth/react", () => ({
 	useConvexAuth: () => ({
 		isAuthenticated: authState.isAuthenticated,
@@ -22,7 +26,7 @@ vi.mock("@convex-dev/auth/react", () => ({
 
 vi.mock("convex/react", () => ({
 	useQuery: () => queryState.openPrs,
-	useMutation: () => vi.fn(async () => null),
+	useMutation: () => mutationState.touchPr,
 }));
 
 function fixturePr(
@@ -54,11 +58,23 @@ function fixturePr(
 	};
 }
 
+async function findTreeFileRow(path: string) {
+	return waitFor(() => {
+		const tree = document.querySelector("file-tree-container");
+		expect(tree).toBeInstanceOf(HTMLElement);
+
+		const row = tree?.shadowRoot?.querySelector(`[data-item-path="${path}"]`);
+		expect(row).toBeInstanceOf(HTMLElement);
+		return row as HTMLElement;
+	});
+}
+
 describe("OpenPrsSidebar", () => {
 	beforeEach(() => {
 		authState.isAuthenticated = true;
 		authState.isLoading = false;
 		queryState.openPrs = [];
+		mutationState.touchPr.mockClear();
 	});
 
 	it("renders nothing when the user is not authenticated", () => {
@@ -98,5 +114,30 @@ describe("OpenPrsSidebar", () => {
 
 		expect(screen.getByText(/Open pull requests/i)).toBeTruthy();
 		expect(screen.getByText("2")).toBeTruthy();
+	});
+
+	it("selects and touches an open PR when its row is clicked", async () => {
+		const onSelect = vi.fn();
+		const pr = fixturePr({
+			owner: "tanstack",
+			repo: "router",
+			number: 1,
+			title: "Add API",
+		});
+		queryState.openPrs = [pr];
+
+		render(<OpenPrsSidebar onSelect={onSelect} />);
+
+		const row = await findTreeFileRow("tanstack/router/Add API");
+		fireEvent.click(row);
+
+		expect(mutationState.touchPr).toHaveBeenCalledWith({ id: pr._id });
+		expect(onSelect).toHaveBeenCalledWith({
+			id: pr._id,
+			owner: "tanstack",
+			repo: "router",
+			number: 1,
+			title: "Add API",
+		});
 	});
 });
