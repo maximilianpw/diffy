@@ -1,4 +1,4 @@
-import type { PrDoc } from "../../../../../convex/doc-types";
+import type { PrDoc } from "../../../../../convex/docTypes";
 import { PrDiscussion } from "../PrDiscussion";
 import { PrSummaryCard } from "../PrSummaryCard";
 import type { PrViewerShellStatus } from ".";

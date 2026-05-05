@@ -1,6 +1,6 @@
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
-import type { PrDoc } from "../../../../convex/doc-types";
+import type { PrDoc } from "../../../../convex/docTypes";
 import { PullRequestState } from "../model/pull-request.types";
 import { PrSummaryCard } from "./PrSummaryCard";
 

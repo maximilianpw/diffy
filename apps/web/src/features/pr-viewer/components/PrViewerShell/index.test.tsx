@@ -6,7 +6,7 @@ import {
 	within,
 } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { PrCommentDoc, PrDoc } from "../../../../../convex/doc-types";
+import type { PrCommentDoc, PrDoc } from "../../../../../convex/docTypes";
 import { PullRequestState } from "../../model/pull-request.types";
 import { PrViewerShell } from ".";
 import { PrUpdateCheckStatus } from "./pr-update-notice-copy";

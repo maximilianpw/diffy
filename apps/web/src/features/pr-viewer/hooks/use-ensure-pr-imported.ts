@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import type { Id } from "../../../../convex/_generated/dataModel";
-import type { PrDoc } from "../../../../convex/doc-types";
+import type { PrDoc } from "../../../../convex/docTypes";
 import { shouldBackfillDiscussion } from "../model/discussion-backfill";
 import { getImportErrorMessage } from "../model/import-error-message";
 

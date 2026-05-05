@@ -1,6 +1,6 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
-import type { PrDoc } from "../../../../convex/doc-types";
+import type { PrDoc } from "../../../../convex/docTypes";
 import { PullRequestState } from "../../pr-viewer/model/pull-request.types";
 import { OpenPrsSidebar } from "./OpenPrsSidebar";
 

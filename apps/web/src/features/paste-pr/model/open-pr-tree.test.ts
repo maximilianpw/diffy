@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { PrDoc } from "../../../../convex/doc-types";
+import type { PrDoc } from "../../../../convex/docTypes";
 import { PullRequestState } from "../../pr-viewer/model/pull-request.types";
 import { buildOpenPrTree } from "./open-pr-tree";
 

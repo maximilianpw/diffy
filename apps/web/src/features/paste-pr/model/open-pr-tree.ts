@@ -1,4 +1,4 @@
-import type { PrDoc } from "../../../../convex/doc-types";
+import type { PrDoc } from "../../../../convex/docTypes";
 import type { Id } from "../../../../convex/_generated/dataModel";
 
 export type OpenPrEntry = {

@@ -1,6 +1,6 @@
 import { useQuery } from "convex/react";
 import { api } from "../../../../convex/_generated/api";
-import type { PrDoc } from "../../../../convex/doc-types";
+import type { PrDoc } from "../../../../convex/docTypes";
 import { MarkdownContent } from "./MarkdownContent";
 import "./PrDiscussion.scss";
 

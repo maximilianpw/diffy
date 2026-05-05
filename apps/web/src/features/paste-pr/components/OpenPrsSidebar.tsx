@@ -6,7 +6,7 @@ import { useMemo } from "react";
 import { Badge } from "#/components/ui/badge";
 import { Card } from "#/components/ui/card";
 import { Separator } from "#/components/ui/separator";
-import type { PrDoc } from "../../../../convex/doc-types";
+import type { PrDoc } from "../../../../convex/docTypes";
 import { buildOpenPrTree, type OpenPrEntry } from "../model/open-pr-tree";
 
 const treeThemeStyles = themeToTreeStyles(vesper);

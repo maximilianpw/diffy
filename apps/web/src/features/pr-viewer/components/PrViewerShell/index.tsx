@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import type { PrDoc } from "../../../../../convex/doc-types";
+import type { PrDoc } from "../../../../../convex/docTypes";
 import { usePrDiff } from "../../hooks/use-pr-diff";
 import { useViewedFiles } from "../../hooks/use-viewed-files";
 import {

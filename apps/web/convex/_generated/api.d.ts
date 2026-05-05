@@ -9,6 +9,7 @@
  */
 
 import type * as auth from "../auth.js";
+import type * as docTypes from "../docTypes.js";
 import type * as githubApiErrors from "../githubApiErrors.js";
 import type * as http from "../http.js";
 import type * as pullRequests from "../pullRequests.js";
@@ -21,6 +22,7 @@ import type {
 
 declare const fullApi: ApiFromModules<{
   auth: typeof auth;
+  docTypes: typeof docTypes;
   githubApiErrors: typeof githubApiErrors;
   http: typeof http;
   pullRequests: typeof pullRequests;
