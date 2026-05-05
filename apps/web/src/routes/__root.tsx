@@ -3,7 +3,7 @@ import { createRootRoute, HeadContent, Scripts } from "@tanstack/react-router";
 import { TanStackRouterDevtoolsPanel } from "@tanstack/react-router-devtools";
 
 import ConvexProvider from "../integrations/convex/provider";
-import "#/components/page-layout.scss";
+import "#/components/index.scss";
 
 import appCss from "../styles.css?url";
 
