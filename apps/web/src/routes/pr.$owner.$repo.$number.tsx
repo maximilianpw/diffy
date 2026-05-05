@@ -1,16 +1,31 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useAction, useQuery } from "convex/react";
-import { useCallback, useEffect, useState } from "react";
-import { Crumb, CrumbLink, CrumbSeparator, TopBar } from "#/components/top-bar";
+import { useCallback, useState } from "react";
+import { TopBar } from "#/components/top-bar";
 import type { PrUpdateCheck } from "#/features/pr-viewer/components/PrViewerShell";
 import { api } from "../../convex/_generated/api";
 import { PrViewerShell } from "../features/pr-viewer/components/PrViewerShell";
+import { useEnsurePrImported } from "../features/pr-viewer/hooks/use-ensure-pr-imported";
 import { usePrUpdatePolling } from "../features/pr-viewer/hooks/use-pr-update-polling";
-import { shouldBackfillDiscussion } from "../features/pr-viewer/model/discussion-backfill";
 import { getImportErrorMessage } from "../features/pr-viewer/model/import-error-message";
 import { PullRequestState } from "../features/pr-viewer/model/pull-request.types";
 
 export const Route = createFileRoute("/pr/$owner/$repo/$number")({
+	params: {
+		parse: ({ owner, repo, number }) => {
+			const prNumber = Number(number);
+			if (!Number.isInteger(prNumber) || prNumber < 1) {
+				throw new Error("Pull request number must be a positive integer.");
+			}
+
+			return { owner, repo, number: prNumber };
+		},
+		stringify: ({ owner, repo, number }) => ({
+			owner,
+			repo,
+			number: String(number),
+		}),
+	},
 	component: PrRoute,
 });
 
@@ -34,67 +49,49 @@ function PrRouteForPullRequest({
 }: {
 	owner: string;
 	repo: string;
-	number: string;
+	number: number;
 }) {
-	const prNumber = Number(number);
 	const importPr = useAction(api.pullRequests.importPr);
 	const importDiscussion = useAction(api.pullRequests.importDiscussion);
 	const checkForUpdates = useAction(api.pullRequests.checkForUpdates);
 	const pr = useQuery(api.pullRequests.getByPr, {
 		owner,
 		repo,
-		number: prNumber,
+		number,
 	});
-	const [importError, setImportError] = useState<string | null>(null);
-	const [importStarted, setImportStarted] = useState(false);
-	const [discussionImportStarted, setDiscussionImportStarted] = useState(false);
+	const importError = useEnsurePrImported({
+		pr,
+		owner,
+		repo,
+		number,
+		importPr,
+		importDiscussion,
+	});
+	const [updateError, setUpdateError] = useState<string | null>(null);
 	const [isApplyingUpdate, setIsApplyingUpdate] = useState(false);
 
 	const polling = usePrUpdatePolling({
 		prState: pr?.state,
 		owner,
 		repo,
-		number: prNumber,
+		number,
 		checkForUpdates,
 		isApplyingUpdate,
 	});
 
-	useEffect(() => {
-		if (pr !== null || importStarted) return;
-
-		setImportStarted(true);
-		void importPr({ owner, repo, number: prNumber }).catch((cause) => {
-			setImportError(getImportErrorMessage(cause));
-		});
-	}, [importPr, importStarted, owner, pr, prNumber, repo]);
-
-	useEffect(() => {
-		if (!pr || !shouldBackfillDiscussion(pr) || discussionImportStarted) return;
-
-		setDiscussionImportStarted(true);
-		void importDiscussion({
-			pullRequestId: pr._id,
-			owner,
-			repo,
-			number: prNumber,
-		}).catch((cause) => {
-			setImportError(getImportErrorMessage(cause));
-		});
-	}, [discussionImportStarted, importDiscussion, owner, pr, prNumber, repo]);
-
 	const applyUpdate = useCallback(async () => {
 		setIsApplyingUpdate(true);
-		setImportError(null);
+		setUpdateError(null);
 		try {
-			await importPr({ owner, repo, number: prNumber });
+			await importPr({ owner, repo, number });
 			polling.clearUpdatesAvailable();
 			polling.clearError();
 		} catch (cause) {
-			setImportError(getImportErrorMessage(cause));
+			setUpdateError(getImportErrorMessage(cause));
 		} finally {
 			setIsApplyingUpdate(false);
 		}
-	}, [importPr, owner, polling, prNumber, repo]);
+	}, [importPr, owner, polling, number, repo]);
 
 	const onApplyUpdate = useCallback(() => void applyUpdate(), [applyUpdate]);
 
@@ -112,21 +109,10 @@ function PrRouteForPullRequest({
 
 	return (
 		<>
-			<TopBar
-				breadcrumb={
-					<>
-						<CrumbLink to="/">Pull requests</CrumbLink>
-						<CrumbSeparator />
-						<Crumb>
-							{owner}/{repo}#{number}
-						</Crumb>
-					</>
-				}
-				htmlUrl={pr?.htmlUrl}
-			/>
+			<TopBar pr={pr ?? { owner, repo, number }} />
 			<PrViewerShell
 				pr={pr ?? null}
-				importError={importError}
+				importError={importError ?? updateError}
 				updateCheck={updateCheck}
 			/>
 		</>

@@ -5,12 +5,32 @@ import { Button, buttonVariants } from "#/components/ui/button";
 import { cn } from "#/lib/utils";
 
 type TopBarProps = {
-	breadcrumb: ReactNode;
+	children?: ReactNode;
+	label?: ReactNode;
 	htmlUrl?: string;
+	pr?: TopBarPullRequest | null;
 	className?: string;
 };
 
-export function TopBar({ breadcrumb, htmlUrl, className }: TopBarProps) {
+type TopBarPullRequest = {
+	owner: string;
+	repo: string;
+	number: number | string;
+	htmlUrl?: string;
+};
+
+export function TopBar({
+	children,
+	label = "Diffy",
+	htmlUrl,
+	pr,
+	className,
+}: TopBarProps) {
+	const breadcrumb =
+		children ??
+		(pr ? <PullRequestBreadcrumb pr={pr} /> : <Crumb>{label}</Crumb>);
+	const githubHtmlUrl = htmlUrl ?? pr?.htmlUrl;
+
 	return (
 		<header
 			className={cn(
@@ -34,9 +54,9 @@ export function TopBar({ breadcrumb, htmlUrl, className }: TopBarProps) {
 				</nav>
 			</div>
 			<div className="flex shrink-0 items-center gap-2">
-				{htmlUrl ? (
+				{githubHtmlUrl ? (
 					<a
-						href={htmlUrl}
+						href={githubHtmlUrl}
 						target="_blank"
 						rel="noreferrer noopener"
 						className={buttonVariants({ variant: "ghost", size: "sm" })}
@@ -47,6 +67,18 @@ export function TopBar({ breadcrumb, htmlUrl, className }: TopBarProps) {
 				<AuthControl />
 			</div>
 		</header>
+	);
+}
+
+function PullRequestBreadcrumb({ pr }: { pr: TopBarPullRequest }) {
+	return (
+		<>
+			<CrumbLink to="/">Pull requests</CrumbLink>
+			<CrumbSeparator />
+			<Crumb>
+				{pr.owner}/{pr.repo} #{pr.number}
+			</Crumb>
+		</>
 	);
 }
 

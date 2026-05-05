@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { sidebarPageGridClassName } from "#/components/page-layout";
-import { Crumb, TopBar } from "#/components/top-bar";
+import { useMutation, useQuery } from "convex/react";
+import { TopBar } from "#/components/top-bar";
+import { api } from "../../convex/_generated/api";
 import { OpenPrsSidebar } from "../features/paste-pr/components/OpenPrsSidebar";
 import { PastePrHome } from "../features/paste-pr/components/PastePrHome";
 
@@ -11,17 +12,21 @@ function Home() {
 
 	return (
 		<>
-			<TopBar breadcrumb={<Crumb>Diffy</Crumb>} />
-			<div className={sidebarPageGridClassName}>
+			<TopBar />
+			<div className="sidebar-page-grid">
 				<OpenPrsSidebar
 					onSelect={({ owner, repo, number }) =>
 						navigate({
 							to: "/pr/$owner/$repo/$number",
-							params: { owner, repo, number: String(number) },
+							params: { owner, repo, number },
 						})
 					}
 				/>
-				<PastePrHome navigateToPr={(path) => navigate({ to: path })} />
+				<PastePrHome
+					isAuthenticated={isAuthenticated}
+					isLoading={isLoading}
+					navigateToPr={navigateToPr}
+				/>
 			</div>
 		</>
 	);
