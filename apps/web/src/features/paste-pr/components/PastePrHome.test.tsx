@@ -70,7 +70,11 @@ describe("PastePrHome", () => {
 		});
 		fireEvent.submit(screen.getByRole("form", { name: "Open GitHub PR" }));
 
-		expect(navigateToPr).toHaveBeenCalledWith("/pr/tanstack/router/123");
+		expect(navigateToPr).toHaveBeenCalledWith({
+			owner: "tanstack",
+			repo: "router",
+			number: 123,
+		});
 	});
 
 	it("shows an error for a non-PR URL", () => {

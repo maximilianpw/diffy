@@ -1,4 +1,3 @@
-import { sidebarPageGridClassName } from "#/components/page-layout";
 import { useEffect, useRef, useState } from "react";
 import type { PrDoc } from "../../../../../convex/doc-types";
 import { usePrDiff } from "../../hooks/use-pr-diff";
@@ -82,7 +81,7 @@ export function PrViewerShell({
 	}
 
 	return (
-		<div className={sidebarPageGridClassName}>
+		<div className="sidebar-page-grid">
 			<ChangedFilesTree
 				key={treeKey}
 				paths={paths}

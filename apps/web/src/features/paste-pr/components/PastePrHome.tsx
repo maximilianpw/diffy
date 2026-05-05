@@ -1,19 +1,16 @@
 import { useAuthActions, useConvexAuth } from "@convex-dev/auth/react";
+import type { PrRef } from "@diffy/shared";
 import { useState } from "react";
-import {
-	contentColumnClassName,
-	fullWidthContentClassName,
-} from "#/components/page-layout";
 import { Alert, AlertDescription } from "#/components/ui/alert";
 import { Button } from "#/components/ui/button";
 import { Card, CardContent, CardDescription } from "#/components/ui/card";
 import { Input } from "#/components/ui/input";
 import { Label } from "#/components/ui/label";
 import { cn } from "#/lib/utils";
-import { getPrPathFromSubmission } from "../model/parse-submission";
+import { getPrRefFromSubmission } from "../model/parse-submission";
 
 type PastePrHomeProps = {
-	navigateToPr: (path: string) => void;
+	navigateToPr: (pr: PrRef) => void;
 };
 
 export function PastePrHome({ navigateToPr }: PastePrHomeProps) {
@@ -21,33 +18,29 @@ export function PastePrHome({ navigateToPr }: PastePrHomeProps) {
 	const { signIn } = useAuthActions();
 	const [value, setValue] = useState("");
 	const [error, setError] = useState<string | null>(null);
-	const homePlacementClassName = isAuthenticated
-		? contentColumnClassName
-		: fullWidthContentClassName;
-
 	function onSubmit(event: React.FormEvent<HTMLFormElement>) {
 		event.preventDefault();
 
-		const path = getPrPathFromSubmission(value);
+		const pr = getPrRefFromSubmission(value);
 		if (!isAuthenticated) {
 			setError("Sign in with GitHub before opening a pull request.");
 			return;
 		}
 
-		if (!path) {
+		if (!pr) {
 			setError("Paste a GitHub pull request URL.");
 			return;
 		}
 
 		setError(null);
-		navigateToPr(path);
+		navigateToPr(pr);
 	}
 
 	return (
 		<main
 			className={cn(
 				"relative flex min-h-[calc(100vh-3rem)] min-w-0 w-full flex-col justify-center px-6 py-16",
-				homePlacementClassName,
+				isAuthenticated ? "content-column" : "full-width-content",
 			)}
 		>
 			<div

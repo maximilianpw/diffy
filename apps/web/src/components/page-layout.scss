@@ -1,0 +1,23 @@
+@layer components {
+	.sidebar-page-grid {
+		display: grid;
+		min-height: calc(100vh - 3rem);
+		grid-template-columns: 1fr;
+
+		@media (min-width: 1024px) {
+			grid-template-columns: 280px minmax(0, 1fr);
+		}
+	}
+
+	.content-column {
+		@media (min-width: 1024px) {
+			grid-column-start: 2;
+		}
+	}
+
+	.full-width-content {
+		@media (min-width: 1024px) {
+			grid-column: span 2 / span 2;
+		}
+	}
+}
