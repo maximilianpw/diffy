@@ -5,12 +5,8 @@ import {
 } from "@pierre/diffs/react";
 import DiffWorker from "@pierre/diffs/worker/worker.js?worker";
 import type { ReactNode } from "react";
-import { useCallback, useMemo } from "react";
+import { useMemo } from "react";
 import { splitPatchFiles } from "../../model/diff-paths";
-import {
-	findFileIndexForFragment,
-	jumpToFileFragment,
-} from "../../model/file-fragment";
 import { FileCard } from "../FileCard";
 
 const diffWorkerHighlighterOptions = {
@@ -37,19 +33,9 @@ export function DiffStack({
 }: DiffStackProps) {
 	const patchFiles = useMemo(() => splitPatchFiles(patch), [patch]);
 
-	const handleStackRef = useCallback(
-		(node: HTMLDivElement | null) => {
-			if (node == null) return;
-
-			const fileIndex = findFileIndexForFragment(patchFiles.length);
-			if (fileIndex !== null) jumpToFileFragment(fileIndex);
-		},
-		[patchFiles.length],
-	);
-
 	return (
 		<DiffWorkerPoolProvider>
-			<div ref={handleStackRef} className="flex flex-col gap-4">
+			<div className="flex flex-col gap-4">
 				<div className="sr-only">{paths.join("\n")}</div>
 				{patchFiles.map((file, fileIndex) => (
 					<FileCard

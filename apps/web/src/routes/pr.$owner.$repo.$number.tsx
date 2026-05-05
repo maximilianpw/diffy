@@ -2,7 +2,10 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useAction, useQuery } from "convex/react";
 import { useCallback, useEffect, useState } from "react";
 import { Crumb, CrumbLink, CrumbSeparator, TopBar } from "#/components/top-bar";
-import type { PrUpdateCheck } from "#/features/pr-viewer/components/PrViewerShell";
+import {
+	type PrUpdateCheck,
+	PrViewerShellStatus,
+} from "#/features/pr-viewer/components/PrViewerShell";
 import { api } from "../../convex/_generated/api";
 import { PrViewerShell } from "../features/pr-viewer/components/PrViewerShell";
 import { usePrUpdatePolling } from "../features/pr-viewer/hooks/use-pr-update-polling";
@@ -132,7 +135,11 @@ function PrRouteForPullRequest({
 
 	const onApplyUpdate = useCallback(() => void applyUpdate(), [applyUpdate]);
 
-	const status = error ? "error" : patch ? "ready" : "importing";
+	const status = error
+		? PrViewerShellStatus.Error
+		: patch
+			? PrViewerShellStatus.Ready
+			: PrViewerShellStatus.Importing;
 	const paths = patch ? getChangedPathsFromPatch(patch) : [];
 	const updateCheck: PrUpdateCheck | undefined =
 		pr?.state === PullRequestState.Open

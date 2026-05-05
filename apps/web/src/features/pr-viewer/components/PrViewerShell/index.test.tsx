@@ -8,7 +8,7 @@ import {
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { Doc } from "../../../../../convex/_generated/dataModel";
 import { PullRequestState } from "../../model/pull-request.types";
-import { PrViewerShell } from ".";
+import { PrViewerShell, PrViewerShellStatus } from ".";
 import { PrUpdateCheckStatus } from "./pr-update-notice-copy";
 
 const TWO_FILE_PATCH = `diff --git a/packages/router/src/index.ts b/packages/router/src/index.ts
@@ -109,6 +109,11 @@ function getTreeViewedToggleTitle(row: HTMLElement) {
 		?.getAttribute("title");
 }
 
+function switchToCodeTab() {
+	fireEvent.click(screen.getByRole("tab", { name: "Code" }));
+	return screen.getByRole("tabpanel", { name: "Code" });
+}
+
 describe("PrViewerShell", () => {
 	const scrollIntoView = vi.fn();
 
@@ -127,7 +132,7 @@ describe("PrViewerShell", () => {
 		render(
 			<PrViewerShell
 				pr={fixturePr()}
-				status="ready"
+				status={PrViewerShellStatus.Ready}
 				paths={["packages/router/src/index.ts", "packages/router/src/util.ts"]}
 				patch={TWO_FILE_PATCH}
 			/>,
@@ -141,8 +146,10 @@ describe("PrViewerShell", () => {
 		expect(screen.getByText("main")).toBeTruthy();
 		expect(screen.getByText("tannerlinsley")).toBeTruthy();
 		expect(screen.getByText("Changed files")).toBeTruthy();
-		expect(screen.getByRole("region", { name: "Diff preview" })).toBeTruthy();
-		const region = screen.getByRole("region", { name: "Diff preview" });
+		expect(
+			screen.getByRole("region", { name: "Pull request preview" }),
+		).toBeTruthy();
+		const region = switchToCodeTab();
 		expect(
 			within(region).getByText("packages/router/src/index.ts"),
 		).toBeTruthy();
@@ -157,13 +164,15 @@ describe("PrViewerShell", () => {
 				pr={fixturePr({
 					body: "## Reviewer context\n\n- [x] Keeps route matching resilient",
 				})}
-				status="ready"
+				status={PrViewerShellStatus.Ready}
 				paths={["packages/router/src/index.ts"]}
 				patch={TWO_FILE_PATCH}
 			/>,
 		);
 
-		const region = screen.getByRole("region", { name: "Diff preview" });
+		const discussionPanel = screen.getByRole("tabpanel", {
+			name: "Discussions",
+		});
 		const discussion = screen.getByRole("region", {
 			name: "Pull request discussion",
 		});
@@ -174,15 +183,79 @@ describe("PrViewerShell", () => {
 		).toBeTruthy();
 		expect(within(discussion).getByText("Author")).toBeTruthy();
 		expect(
-			within(region).getByRole("heading", { name: "Reviewer context" }),
+			within(discussionPanel).getByRole("heading", {
+				name: "Reviewer context",
+			}),
 		).toBeTruthy();
-		expect(within(region).getByRole("checkbox")).toHaveProperty(
-			"checked",
-			true,
-		);
+		const codePanel = switchToCodeTab();
 		expect(
-			within(region).getAllByText("packages/router/src/index.ts").length,
+			within(codePanel).getByRole("button", {
+				name: /Mark packages\/router\/src\/index\.ts as viewed/,
+			}),
+		).toBeTruthy();
+		expect(
+			within(codePanel).getAllByText("packages/router/src/index.ts").length,
 		).toBeGreaterThan(0);
+	});
+
+	it("defaults to the Discussions tab and shows diffs after switching to Code", () => {
+		render(
+			<PrViewerShell
+				pr={fixturePr({
+					body: "## Reviewer context\n\nStart with the PR message.",
+				})}
+				comments={[fixtureComment()]}
+				status={PrViewerShellStatus.Ready}
+				paths={["packages/router/src/index.ts", "packages/router/src/util.ts"]}
+				patch={TWO_FILE_PATCH}
+			/>,
+		);
+
+		const discussionsTab = screen.getByRole("tab", { name: "Discussions" });
+		const codeTab = screen.getByRole("tab", { name: "Code" });
+		expect(discussionsTab.getAttribute("aria-selected")).toBe("true");
+		expect(codeTab.getAttribute("aria-selected")).toBe("false");
+		expect(screen.getByRole("tabpanel", { name: "Discussions" })).toBeTruthy();
+		expect(
+			screen.getByRole("heading", { name: "Reviewer context" }),
+		).toBeTruthy();
+		expect(screen.getByText("tkdodo")).toBeTruthy();
+		expect(screen.queryByText("packages/router/src/index.ts")).toBeNull();
+
+		fireEvent.click(codeTab);
+
+		expect(discussionsTab.getAttribute("aria-selected")).toBe("false");
+		expect(codeTab.getAttribute("aria-selected")).toBe("true");
+		const codePanel = screen.getByRole("tabpanel", { name: "Code" });
+		expect(
+			within(codePanel).getByText("packages/router/src/index.ts"),
+		).toBeTruthy();
+		expect(
+			screen.queryByRole("heading", { name: "Reviewer context" }),
+		).toBeNull();
+	});
+
+	it("does not scroll when returning to Code from Discussions", async () => {
+		window.location.hash = "#2";
+
+		render(
+			<PrViewerShell
+				pr={fixturePr()}
+				status={PrViewerShellStatus.Ready}
+				paths={["packages/router/src/index.ts", "packages/router/src/util.ts"]}
+				patch={TWO_FILE_PATCH}
+			/>,
+		);
+
+		await waitFor(() => {
+			expect(scrollIntoView).toHaveBeenCalledTimes(1);
+		});
+
+		fireEvent.click(screen.getByRole("tab", { name: "Discussions" }));
+		scrollIntoView.mockClear();
+		fireEvent.click(screen.getByRole("tab", { name: "Code" }));
+
+		expect(scrollIntoView).not.toHaveBeenCalled();
 	});
 
 	it("renders top-level pull request comments as GitHub-flavored markdown", () => {
@@ -190,7 +263,7 @@ describe("PrViewerShell", () => {
 			<PrViewerShell
 				pr={fixturePr()}
 				comments={[fixtureComment()]}
-				status="ready"
+				status={PrViewerShellStatus.Ready}
 				paths={["packages/router/src/index.ts"]}
 				patch={TWO_FILE_PATCH}
 			/>,
@@ -215,7 +288,7 @@ describe("PrViewerShell", () => {
 		render(
 			<PrViewerShell
 				pr={fixturePr({ state: PullRequestState.Open })}
-				status="ready"
+				status={PrViewerShellStatus.Ready}
 				paths={["packages/router/src/index.ts"]}
 				patch={TWO_FILE_PATCH}
 				updateCheck={{
@@ -244,7 +317,7 @@ describe("PrViewerShell", () => {
 		render(
 			<PrViewerShell
 				pr={fixturePr({ state: PullRequestState.Open })}
-				status="ready"
+				status={PrViewerShellStatus.Ready}
 				paths={["packages/router/src/index.ts"]}
 				patch={TWO_FILE_PATCH}
 				updateCheck={{
@@ -268,11 +341,12 @@ describe("PrViewerShell", () => {
 		render(
 			<PrViewerShell
 				pr={fixturePr()}
-				status="ready"
+				status={PrViewerShellStatus.Ready}
 				paths={["packages/router/src/index.ts", "packages/router/src/util.ts"]}
 				patch={TWO_FILE_PATCH}
 			/>,
 		);
+		switchToCodeTab();
 
 		const fileHeader = screen.getByRole("button", {
 			name: /Mark packages\/router\/src\/index\.ts as viewed/,
@@ -288,11 +362,12 @@ describe("PrViewerShell", () => {
 		render(
 			<PrViewerShell
 				pr={fixturePr()}
-				status="ready"
+				status={PrViewerShellStatus.Ready}
 				paths={["packages/router/src/index.ts", "packages/router/src/util.ts"]}
 				patch={TWO_FILE_PATCH}
 			/>,
 		);
+		switchToCodeTab();
 
 		const treeRow = await findTreeFileRow("packages/router/src/index.ts");
 		expect(treeRow.getAttribute("data-item-viewed")).toBeNull();
@@ -312,11 +387,12 @@ describe("PrViewerShell", () => {
 		render(
 			<PrViewerShell
 				pr={fixturePr()}
-				status="ready"
+				status={PrViewerShellStatus.Ready}
 				paths={["packages/router/src/index.ts", "packages/router/src/util.ts"]}
 				patch={TWO_FILE_PATCH}
 			/>,
 		);
+		switchToCodeTab();
 
 		const treeRow = await findTreeFileRow("packages/router/src/index.ts");
 		const treeToggle = getTreeViewedToggle(treeRow);
@@ -344,11 +420,12 @@ describe("PrViewerShell", () => {
 		render(
 			<PrViewerShell
 				pr={fixturePr()}
-				status="ready"
+				status={PrViewerShellStatus.Ready}
 				paths={["packages/router/src/index.ts", "packages/router/src/util.ts"]}
 				patch={TWO_FILE_PATCH}
 			/>,
 		);
+		switchToCodeTab();
 
 		const folderRow = await findTreeFolderRow("packages/router/src/");
 		const folderToggle = getTreeViewedToggle(folderRow);
@@ -377,11 +454,12 @@ describe("PrViewerShell", () => {
 		render(
 			<PrViewerShell
 				pr={fixturePr()}
-				status="ready"
+				status={PrViewerShellStatus.Ready}
 				paths={["packages/router/src/index.ts", "packages/router/src/util.ts"]}
 				patch={TWO_FILE_PATCH}
 			/>,
 		);
+		switchToCodeTab();
 
 		const fileRow = await findTreeFileRow("packages/router/src/util.ts");
 		const fileHeader = screen.getByRole("button", {
@@ -410,7 +488,7 @@ describe("PrViewerShell", () => {
 		render(
 			<PrViewerShell
 				pr={fixturePr()}
-				status="ready"
+				status={PrViewerShellStatus.Ready}
 				paths={["packages/router/src/index.ts", "packages/router/src/util.ts"]}
 				patch={TWO_FILE_PATCH}
 			/>,
@@ -439,11 +517,12 @@ describe("PrViewerShell", () => {
 		const { rerender } = render(
 			<PrViewerShell
 				pr={prA}
-				status="ready"
+				status={PrViewerShellStatus.Ready}
 				paths={["packages/router/src/index.ts"]}
 				patch={TWO_FILE_PATCH}
 			/>,
 		);
+		switchToCodeTab();
 
 		const headerA = screen.getByRole("button", {
 			name: /Mark packages\/router\/src\/index\.ts as viewed/,
@@ -454,12 +533,13 @@ describe("PrViewerShell", () => {
 		rerender(
 			<PrViewerShell
 				pr={prB}
-				status="ready"
+				status={PrViewerShellStatus.Ready}
 				paths={["packages/router/src/index.ts"]}
 				patch={TWO_FILE_PATCH}
 			/>,
 		);
 
+		switchToCodeTab();
 		const headerB = screen.getByRole("button", {
 			name: /Mark packages\/router\/src\/index\.ts as viewed/,
 		});
@@ -468,7 +548,12 @@ describe("PrViewerShell", () => {
 
 	it("renders an importing state", () => {
 		render(
-			<PrViewerShell pr={null} status="importing" paths={[]} patch={null} />,
+			<PrViewerShell
+				pr={null}
+				status={PrViewerShellStatus.Importing}
+				paths={[]}
+				patch={null}
+			/>,
 		);
 
 		expect(
@@ -480,7 +565,7 @@ describe("PrViewerShell", () => {
 		render(
 			<PrViewerShell
 				pr={null}
-				status="error"
+				status={PrViewerShellStatus.Error}
 				paths={[]}
 				patch={null}
 				error="Could not import pull request."

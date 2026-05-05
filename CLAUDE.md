@@ -7,6 +7,11 @@ A self-hosted GitHub PR diff viewer. Entered from a browser-extension tab next t
 - **TDD by default.** Red → green → refactor. Write the failing test first, smallest change to pass, then clean up. Use the `tdd` skill if it helps structure the loop.
 - **Don't expand scope.** If a task drifts toward something in "Out of scope" below, stop and ask.
 
+## Code style
+
+- **Prefer enums for named states and modes.** Use enums instead of ad hoc string unions or repeated string literals when modeling domain states, UI modes, statuses, or cross-module contracts.
+- **Avoid `useEffect` by default.** Prefer derived render state, event handlers, router/search state, refs, or data-fetching framework primitives before reaching for `useEffect`. Use effects only for real synchronization with external systems or browser APIs, and keep them narrow.
+
 ## Decisions worth knowing
 
 These aren't obvious from the code — don't second-guess them without asking.

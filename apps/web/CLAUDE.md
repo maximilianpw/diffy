@@ -5,3 +5,8 @@ When working on Convex code, **always read `convex/_generated/ai/guidelines.md` 
 
 Convex agent skills for common tasks can be installed by running `npx convex ai-files install`.
 <!-- convex-ai-end -->
+
+## Code style
+
+- Prefer enums for named states, modes, statuses, and cross-module contracts instead of ad hoc string unions or repeated string literals.
+- Avoid `useEffect` where possible. Prefer derived render state, event handlers, router/search state, refs, or framework data primitives. Use effects only for focused synchronization with external systems or browser APIs.
