@@ -1,14 +1,12 @@
-import { useConvexAuth } from "@convex-dev/auth/react";
 import { themeToTreeStyles } from "@pierre/trees";
 import { FileTree, useFileTree } from "@pierre/trees/react";
 import vesper from "@shikijs/themes/vesper";
-import { useMutation, useQuery } from "convex/react";
 import type { MouseEvent as ReactMouseEvent } from "react";
 import { useMemo } from "react";
 import { Badge } from "#/components/ui/badge";
 import { Card } from "#/components/ui/card";
 import { Separator } from "#/components/ui/separator";
-import { api } from "../../../../convex/_generated/api";
+import type { PrDoc } from "../../../../convex/doc-types";
 import { buildOpenPrTree, type OpenPrEntry } from "../model/open-pr-tree";
 
 const treeThemeStyles = themeToTreeStyles(vesper);
@@ -20,17 +18,16 @@ const HIDE_FILE_ICON_CSS = `
 `;
 
 type OpenPrsSidebarProps = {
+	isAuthenticated: boolean;
+	openPrs: PrDoc[] | undefined;
 	onSelect: (entry: OpenPrEntry) => void;
 };
 
-export function OpenPrsSidebar({ onSelect }: OpenPrsSidebarProps) {
-	const { isAuthenticated } = useConvexAuth();
-	const openPrs = useQuery(
-		api.pullRequests.listOpen,
-		isAuthenticated ? {} : "skip",
-	);
-	const touchPr = useMutation(api.pullRequests.touch);
-
+export function OpenPrsSidebar({
+	isAuthenticated,
+	openPrs,
+	onSelect,
+}: OpenPrsSidebarProps) {
 	const { paths, prByPath } = useMemo(
 		() => buildOpenPrTree(openPrs ?? []),
 		[openPrs],
@@ -67,10 +64,7 @@ export function OpenPrsSidebar({ onSelect }: OpenPrsSidebarProps) {
 					key={paths.join("\0")}
 					paths={paths}
 					prByPath={prByPath}
-					onSelect={(entry) => {
-						void touchPr({ id: entry.id });
-						onSelect(entry);
-					}}
+					onSelect={onSelect}
 				/>
 			)}
 		</aside>

@@ -2,34 +2,25 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { PastePrHome } from "./PastePrHome";
 
-const authState = vi.hoisted(() => ({
-	isAuthenticated: true,
-	isLoading: false,
-	signIn: vi.fn(),
-	signOut: vi.fn(),
-}));
+const signIn = vi.hoisted(() => vi.fn());
 
 vi.mock("@convex-dev/auth/react", () => ({
-	useAuthActions: () => ({
-		signIn: authState.signIn,
-		signOut: authState.signOut,
-	}),
-	useConvexAuth: () => ({
-		isAuthenticated: authState.isAuthenticated,
-		isLoading: authState.isLoading,
-	}),
+	useAuthActions: () => ({ signIn }),
 }));
 
 describe("PastePrHome", () => {
 	beforeEach(() => {
-		authState.isAuthenticated = true;
-		authState.isLoading = false;
-		authState.signIn.mockReset();
-		authState.signOut.mockReset();
+		signIn.mockReset();
 	});
 
 	it("renders the editorial hero heading", () => {
-		render(<PastePrHome navigateToPr={vi.fn()} />);
+		render(
+			<PastePrHome
+				isAuthenticated={true}
+				isLoading={false}
+				navigateToPr={vi.fn()}
+			/>,
+		);
 
 		expect(
 			screen.getByRole("heading", { name: /Read a pull request/ }),
@@ -40,21 +31,31 @@ describe("PastePrHome", () => {
 	});
 
 	it("uses the content column when the open PR sidebar is visible", () => {
-		render(<PastePrHome navigateToPr={vi.fn()} />);
+		render(
+			<PastePrHome
+				isAuthenticated={true}
+				isLoading={false}
+				navigateToPr={vi.fn()}
+			/>,
+		);
 
-		expect(screen.getByRole("main").classList.contains("lg:col-start-2")).toBe(
+		expect(screen.getByRole("main").classList.contains("content-column")).toBe(
 			true,
 		);
 	});
 
 	it("centers across the full page when the signed-out sidebar is hidden", () => {
-		authState.isAuthenticated = false;
-
-		render(<PastePrHome navigateToPr={vi.fn()} />);
-
-		expect(screen.getByRole("main").classList.contains("lg:col-span-2")).toBe(
-			true,
+		render(
+			<PastePrHome
+				isAuthenticated={false}
+				isLoading={false}
+				navigateToPr={vi.fn()}
+			/>,
 		);
+
+		expect(
+			screen.getByRole("main").classList.contains("full-width-content"),
+		).toBe(true);
 		expect(screen.getByTestId("paste-pr-home-content").classList).toContain(
 			"mx-auto",
 		);
@@ -63,7 +64,13 @@ describe("PastePrHome", () => {
 	it("navigates to the canonical PR route for a GitHub PR URL", () => {
 		const navigateToPr = vi.fn();
 
-		render(<PastePrHome navigateToPr={navigateToPr} />);
+		render(
+			<PastePrHome
+				isAuthenticated={true}
+				isLoading={false}
+				navigateToPr={navigateToPr}
+			/>,
+		);
 
 		fireEvent.change(screen.getByLabelText("Pull request URL"), {
 			target: { value: "https://github.com/tanstack/router/pull/123" },
@@ -80,7 +87,13 @@ describe("PastePrHome", () => {
 	it("shows an error for a non-PR URL", () => {
 		const navigateToPr = vi.fn();
 
-		render(<PastePrHome navigateToPr={navigateToPr} />);
+		render(
+			<PastePrHome
+				isAuthenticated={true}
+				isLoading={false}
+				navigateToPr={navigateToPr}
+			/>,
+		);
 
 		fireEvent.change(screen.getByLabelText("Pull request URL"), {
 			target: { value: "https://github.com/tanstack/router" },
@@ -92,16 +105,21 @@ describe("PastePrHome", () => {
 	});
 
 	it("prompts unauthenticated users to sign in with GitHub", () => {
-		authState.isAuthenticated = false;
 		const navigateToPr = vi.fn();
 
-		render(<PastePrHome navigateToPr={navigateToPr} />);
+		render(
+			<PastePrHome
+				isAuthenticated={false}
+				isLoading={false}
+				navigateToPr={navigateToPr}
+			/>,
+		);
 
 		fireEvent.click(
 			screen.getByRole("button", { name: "Sign in with GitHub" }),
 		);
 
-		expect(authState.signIn).toHaveBeenCalledWith("github");
+		expect(signIn).toHaveBeenCalledWith("github");
 		expect(screen.getByRole("button", { name: "Open PR" })).toHaveProperty(
 			"disabled",
 			true,

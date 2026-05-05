@@ -1,4 +1,4 @@
-import { useAuthActions, useConvexAuth } from "@convex-dev/auth/react";
+import { useAuthActions } from "@convex-dev/auth/react";
 import type { PrRef } from "@diffy/shared";
 import { useState } from "react";
 import { Alert, AlertDescription } from "#/components/ui/alert";
@@ -10,11 +10,16 @@ import { cn } from "#/lib/utils";
 import { getPrRefFromSubmission } from "../model/parse-submission";
 
 type PastePrHomeProps = {
+	isAuthenticated: boolean;
+	isLoading: boolean;
 	navigateToPr: (pr: PrRef) => void;
 };
 
-export function PastePrHome({ navigateToPr }: PastePrHomeProps) {
-	const { isAuthenticated, isLoading } = useConvexAuth();
+export function PastePrHome({
+	isAuthenticated,
+	isLoading,
+	navigateToPr,
+}: PastePrHomeProps) {
 	const { signIn } = useAuthActions();
 	const [value, setValue] = useState("");
 	const [error, setError] = useState<string | null>(null);

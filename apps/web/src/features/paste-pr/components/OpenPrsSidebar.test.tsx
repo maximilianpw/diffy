@@ -1,33 +1,8 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import type { PrDoc } from "../../../../convex/doc-types";
 import { PullRequestState } from "../../pr-viewer/model/pull-request.types";
 import { OpenPrsSidebar } from "./OpenPrsSidebar";
-
-const authState = vi.hoisted(() => ({
-	isAuthenticated: true,
-	isLoading: false,
-}));
-
-const queryState = vi.hoisted(() => ({
-	openPrs: [] as PrDoc[] | undefined,
-}));
-
-const mutationState = vi.hoisted(() => ({
-	touchPr: vi.fn(async () => null),
-}));
-
-vi.mock("@convex-dev/auth/react", () => ({
-	useConvexAuth: () => ({
-		isAuthenticated: authState.isAuthenticated,
-		isLoading: authState.isLoading,
-	}),
-}));
-
-vi.mock("convex/react", () => ({
-	useQuery: () => queryState.openPrs,
-	useMutation: () => mutationState.touchPr,
-}));
 
 function fixturePr(
 	overrides: Partial<PrDoc> & {
@@ -70,68 +45,63 @@ async function findTreeFileRow(path: string) {
 }
 
 describe("OpenPrsSidebar", () => {
-	beforeEach(() => {
-		authState.isAuthenticated = true;
-		authState.isLoading = false;
-		queryState.openPrs = [];
-		mutationState.touchPr.mockClear();
-	});
-
 	it("renders nothing when the user is not authenticated", () => {
-		authState.isAuthenticated = false;
-		queryState.openPrs = undefined;
-
-		const { container } = render(<OpenPrsSidebar onSelect={vi.fn()} />);
+		const { container } = render(
+			<OpenPrsSidebar
+				isAuthenticated={false}
+				openPrs={undefined}
+				onSelect={vi.fn()}
+			/>,
+		);
 
 		expect(container.firstChild).toBeNull();
 	});
 
 	it("shows an empty state when there are no open PRs", () => {
-		queryState.openPrs = [];
-
-		render(<OpenPrsSidebar onSelect={vi.fn()} />);
+		render(
+			<OpenPrsSidebar
+				isAuthenticated={true}
+				openPrs={[]}
+				onSelect={vi.fn()}
+			/>,
+		);
 
 		expect(screen.getByText(/No open pull requests/i)).toBeTruthy();
 	});
 
 	it("renders the open-PR header and count when PRs are present", () => {
-		queryState.openPrs = [
-			fixturePr({
-				owner: "tanstack",
-				repo: "router",
-				number: 1,
-				title: "Add API",
-			}),
-			fixturePr({
-				owner: "tanstack",
-				repo: "query",
-				number: 2,
-				title: "Fix cache",
-			}),
+		const openPrs = [
+			fixturePr({ owner: "tanstack", repo: "router", number: 1, title: "Add API" }),
+			fixturePr({ owner: "tanstack", repo: "query", number: 2, title: "Fix cache" }),
 		];
 
-		render(<OpenPrsSidebar onSelect={vi.fn()} />);
+		render(
+			<OpenPrsSidebar
+				isAuthenticated={true}
+				openPrs={openPrs}
+				onSelect={vi.fn()}
+			/>,
+		);
 
 		expect(screen.getByText(/Open pull requests/i)).toBeTruthy();
 		expect(screen.getByText("2")).toBeTruthy();
 	});
 
-	it("selects and touches an open PR when its row is clicked", async () => {
+	it("calls onSelect with the PR entry when its row is clicked", async () => {
 		const onSelect = vi.fn();
-		const pr = fixturePr({
-			owner: "tanstack",
-			repo: "router",
-			number: 1,
-			title: "Add API",
-		});
-		queryState.openPrs = [pr];
+		const pr = fixturePr({ owner: "tanstack", repo: "router", number: 1, title: "Add API" });
 
-		render(<OpenPrsSidebar onSelect={onSelect} />);
+		render(
+			<OpenPrsSidebar
+				isAuthenticated={true}
+				openPrs={[pr]}
+				onSelect={onSelect}
+			/>,
+		);
 
 		const row = await findTreeFileRow("tanstack/router/Add API");
 		fireEvent.click(row);
 
-		expect(mutationState.touchPr).toHaveBeenCalledWith({ id: pr._id });
 		expect(onSelect).toHaveBeenCalledWith({
 			id: pr._id,
 			owner: "tanstack",
