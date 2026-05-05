@@ -5,11 +5,19 @@ import {
 	waitFor,
 	within,
 } from "@testing-library/react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { PrCommentDoc, PrDoc } from "../../../../../convex/doc-types";
 import { PullRequestState } from "../../model/pull-request.types";
-import { PrViewerShell, PrViewerShellStatus } from ".";
+import { PrViewerShell } from ".";
 import { PrUpdateCheckStatus } from "./pr-update-notice-copy";
+
+const queryState = vi.hoisted(() => ({
+	comments: [] as PrCommentDoc[],
+}));
+
+vi.mock("convex/react", () => ({
+	useQuery: () => queryState.comments,
+}));
 
 const TWO_FILE_PATCH = `diff --git a/packages/router/src/index.ts b/packages/router/src/index.ts
 index 1111111..2222222 100644
@@ -27,9 +35,9 @@ index 3333333..4444444 100644
 +new
 `;
 
-function fixturePr(
-	overrides: Partial<PrDoc> = {},
-): PrDoc {
+type PrFixture = PrDoc & { diffUrl: string | null };
+
+function fixturePr(overrides: Partial<PrFixture> = {}): PrFixture {
 	return {
 		_id: "pr_test" as PrDoc["_id"],
 		_creationTime: 0,
@@ -48,6 +56,7 @@ function fixturePr(
 		htmlUrl: "https://github.com/tanstack/router/pull/123",
 		diffStorageId: "storage_test" as PrDoc["diffStorageId"],
 		diffByteSize: 1234,
+		diffUrl: "https://example.com/diff",
 		importedAt: new Date("2026-04-12T00:00:00Z").getTime(),
 		lastViewedAt: new Date("2026-04-12T00:00:00Z").getTime(),
 		githubUpdatedAt: new Date("2026-04-12T00:00:00Z").getTime(),
@@ -109,9 +118,15 @@ function getTreeViewedToggleTitle(row: HTMLElement) {
 		?.getAttribute("title");
 }
 
-function switchToCodeTab() {
+async function switchToCodeTab() {
 	fireEvent.click(screen.getByRole("tab", { name: "Code" }));
-	return screen.getByRole("tabpanel", { name: "Code" });
+	const panel = screen.getByRole("tabpanel", { name: "Code" });
+	await waitFor(() => {
+		expect(
+			within(panel).queryByText("packages/router/src/index.ts"),
+		).not.toBeNull();
+	});
+	return panel;
 }
 
 describe("PrViewerShell", () => {
@@ -120,23 +135,31 @@ describe("PrViewerShell", () => {
 	beforeEach(() => {
 		window.location.hash = "";
 		localStorage.clear();
+		queryState.comments = [];
 		scrollIntoView.mockReset();
 		Object.defineProperty(Element.prototype, "scrollIntoView", {
 			configurable: true,
 			value: scrollIntoView,
 			writable: true,
 		});
+		vi.stubGlobal(
+			"fetch",
+			vi.fn(
+				async () =>
+					new Response(TWO_FILE_PATCH, {
+						status: 200,
+						headers: { "content-type": "text/plain" },
+					}),
+			),
+		);
 	});
 
-	it("renders the PR summary, file tree, and one card per changed file", () => {
-		render(
-			<PrViewerShell
-				pr={fixturePr()}
-				status={PrViewerShellStatus.Ready}
-				paths={["packages/router/src/index.ts", "packages/router/src/util.ts"]}
-				patch={TWO_FILE_PATCH}
-			/>,
-		);
+	afterEach(() => {
+		vi.unstubAllGlobals();
+	});
+
+	it("renders the PR summary, file tree, and one card per changed file", async () => {
+		render(<PrViewerShell pr={fixturePr()} />);
 
 		expect(
 			screen.getByRole("heading", { name: "Add resilient route matching" }),
@@ -161,7 +184,7 @@ describe("PrViewerShell", () => {
 				.getByRole("region", { name: "Pull request preview" })
 				.classList.contains("min-w-0"),
 		).toBe(true);
-		const region = switchToCodeTab();
+		const region = await switchToCodeTab();
 		expect(
 			within(region).getByText("packages/router/src/index.ts"),
 		).toBeTruthy();
@@ -170,15 +193,12 @@ describe("PrViewerShell", () => {
 		).toBeTruthy();
 	});
 
-	it("renders the PR body as GitHub-flavored markdown above the diff", () => {
+	it("renders the PR body as GitHub-flavored markdown above the diff", async () => {
 		render(
 			<PrViewerShell
 				pr={fixturePr({
 					body: "## Reviewer context\n\n- [x] Keeps route matching resilient",
 				})}
-				status={PrViewerShellStatus.Ready}
-				paths={["packages/router/src/index.ts"]}
-				patch={TWO_FILE_PATCH}
 			/>,
 		);
 
@@ -199,7 +219,7 @@ describe("PrViewerShell", () => {
 				name: "Reviewer context",
 			}),
 		).toBeTruthy();
-		const codePanel = switchToCodeTab();
+		const codePanel = await switchToCodeTab();
 		expect(
 			within(codePanel).getByRole("button", {
 				name: /Mark packages\/router\/src\/index\.ts as viewed/,
@@ -210,16 +230,14 @@ describe("PrViewerShell", () => {
 		).toBeGreaterThan(0);
 	});
 
-	it("defaults to the Discussions tab and shows diffs after switching to Code", () => {
+	it("defaults to the Discussions tab and shows diffs after switching to Code", async () => {
+		queryState.comments = [fixtureComment()];
+
 		render(
 			<PrViewerShell
 				pr={fixturePr({
 					body: "## Reviewer context\n\nStart with the PR message.",
 				})}
-				comments={[fixtureComment()]}
-				status={PrViewerShellStatus.Ready}
-				paths={["packages/router/src/index.ts", "packages/router/src/util.ts"]}
-				patch={TWO_FILE_PATCH}
 			/>,
 		);
 
@@ -234,11 +252,10 @@ describe("PrViewerShell", () => {
 		expect(screen.getByText("tkdodo")).toBeTruthy();
 		expect(screen.queryByText("packages/router/src/index.ts")).toBeNull();
 
-		fireEvent.click(codeTab);
+		const codePanel = await switchToCodeTab();
 
 		expect(discussionsTab.getAttribute("aria-selected")).toBe("false");
 		expect(codeTab.getAttribute("aria-selected")).toBe("true");
-		const codePanel = screen.getByRole("tabpanel", { name: "Code" });
 		expect(
 			within(codePanel).getByText("packages/router/src/index.ts"),
 		).toBeTruthy();
@@ -250,14 +267,7 @@ describe("PrViewerShell", () => {
 	it("does not scroll when returning to Code from Discussions", async () => {
 		window.location.hash = "#2";
 
-		render(
-			<PrViewerShell
-				pr={fixturePr()}
-				status={PrViewerShellStatus.Ready}
-				paths={["packages/router/src/index.ts", "packages/router/src/util.ts"]}
-				patch={TWO_FILE_PATCH}
-			/>,
-		);
+		render(<PrViewerShell pr={fixturePr()} />);
 
 		await waitFor(() => {
 			expect(scrollIntoView).toHaveBeenCalledTimes(1);
@@ -271,15 +281,9 @@ describe("PrViewerShell", () => {
 	});
 
 	it("renders top-level pull request comments as GitHub-flavored markdown", () => {
-		render(
-			<PrViewerShell
-				pr={fixturePr()}
-				comments={[fixtureComment()]}
-				status={PrViewerShellStatus.Ready}
-				paths={["packages/router/src/index.ts"]}
-				patch={TWO_FILE_PATCH}
-			/>,
-		);
+		queryState.comments = [fixtureComment()];
+
+		render(<PrViewerShell pr={fixturePr()} />);
 
 		const discussion = screen.getByRole("region", {
 			name: "Pull request discussion",
@@ -300,9 +304,6 @@ describe("PrViewerShell", () => {
 		render(
 			<PrViewerShell
 				pr={fixturePr({ state: PullRequestState.Open })}
-				status={PrViewerShellStatus.Ready}
-				paths={["packages/router/src/index.ts"]}
-				patch={TWO_FILE_PATCH}
 				updateCheck={{
 					status: PrUpdateCheckStatus.Available,
 					autoCheckEnabled: true,
@@ -329,9 +330,6 @@ describe("PrViewerShell", () => {
 		render(
 			<PrViewerShell
 				pr={fixturePr({ state: PullRequestState.Open })}
-				status={PrViewerShellStatus.Ready}
-				paths={["packages/router/src/index.ts"]}
-				patch={TWO_FILE_PATCH}
 				updateCheck={{
 					status: PrUpdateCheckStatus.Idle,
 					autoCheckEnabled: true,
@@ -349,16 +347,9 @@ describe("PrViewerShell", () => {
 		expect(screen.getByText(/Last checked/)).toBeTruthy();
 	});
 
-	it("marks a file as viewed when its checkbox is clicked, hiding the diff body", () => {
-		render(
-			<PrViewerShell
-				pr={fixturePr()}
-				status={PrViewerShellStatus.Ready}
-				paths={["packages/router/src/index.ts", "packages/router/src/util.ts"]}
-				patch={TWO_FILE_PATCH}
-			/>,
-		);
-		switchToCodeTab();
+	it("marks a file as viewed when its checkbox is clicked, hiding the diff body", async () => {
+		render(<PrViewerShell pr={fixturePr()} />);
+		await switchToCodeTab();
 
 		const fileHeader = screen.getByRole("button", {
 			name: /Mark packages\/router\/src\/index\.ts as viewed/,
@@ -371,15 +362,8 @@ describe("PrViewerShell", () => {
 	});
 
 	it("greys out a tree row when its file is marked as viewed", async () => {
-		render(
-			<PrViewerShell
-				pr={fixturePr()}
-				status={PrViewerShellStatus.Ready}
-				paths={["packages/router/src/index.ts", "packages/router/src/util.ts"]}
-				patch={TWO_FILE_PATCH}
-			/>,
-		);
-		switchToCodeTab();
+		render(<PrViewerShell pr={fixturePr()} />);
+		await switchToCodeTab();
 
 		const treeRow = await findTreeFileRow("packages/router/src/index.ts");
 		expect(treeRow.getAttribute("data-item-viewed")).toBeNull();
@@ -396,15 +380,8 @@ describe("PrViewerShell", () => {
 	});
 
 	it("marks a file as viewed when its tree checkbox is clicked", async () => {
-		render(
-			<PrViewerShell
-				pr={fixturePr()}
-				status={PrViewerShellStatus.Ready}
-				paths={["packages/router/src/index.ts", "packages/router/src/util.ts"]}
-				patch={TWO_FILE_PATCH}
-			/>,
-		);
-		switchToCodeTab();
+		render(<PrViewerShell pr={fixturePr()} />);
+		await switchToCodeTab();
 
 		const treeRow = await findTreeFileRow("packages/router/src/index.ts");
 		const treeToggle = getTreeViewedToggle(treeRow);
@@ -429,15 +406,8 @@ describe("PrViewerShell", () => {
 	});
 
 	it("marks all descendant files viewed when a tree folder checkbox is clicked", async () => {
-		render(
-			<PrViewerShell
-				pr={fixturePr()}
-				status={PrViewerShellStatus.Ready}
-				paths={["packages/router/src/index.ts", "packages/router/src/util.ts"]}
-				patch={TWO_FILE_PATCH}
-			/>,
-		);
-		switchToCodeTab();
+		render(<PrViewerShell pr={fixturePr()} />);
+		await switchToCodeTab();
 
 		const folderRow = await findTreeFolderRow("packages/router/src/");
 		const folderToggle = getTreeViewedToggle(folderRow);
@@ -463,15 +433,8 @@ describe("PrViewerShell", () => {
 	});
 
 	it("updates the URL fragment and jumps to a file when its tree row is clicked", async () => {
-		render(
-			<PrViewerShell
-				pr={fixturePr()}
-				status={PrViewerShellStatus.Ready}
-				paths={["packages/router/src/index.ts", "packages/router/src/util.ts"]}
-				patch={TWO_FILE_PATCH}
-			/>,
-		);
-		switchToCodeTab();
+		render(<PrViewerShell pr={fixturePr()} />);
+		await switchToCodeTab();
 
 		const fileRow = await findTreeFileRow("packages/router/src/util.ts");
 		const fileHeader = screen.getByRole("button", {
@@ -497,44 +460,29 @@ describe("PrViewerShell", () => {
 	it("jumps to a file when the PR loads with a matching URL fragment", async () => {
 		window.location.hash = "#2";
 
-		render(
-			<PrViewerShell
-				pr={fixturePr()}
-				status={PrViewerShellStatus.Ready}
-				paths={["packages/router/src/index.ts", "packages/router/src/util.ts"]}
-				patch={TWO_FILE_PATCH}
-			/>,
-		);
+		render(<PrViewerShell pr={fixturePr()} />);
 
+		await waitFor(() => {
+			expect(scrollIntoView).toHaveBeenCalledTimes(1);
+		});
 		const fileHeader = screen.getByRole("button", {
 			name: /Mark packages\/router\/src\/util\.ts as viewed/,
 		});
 		const fileCard = document.getElementById("2");
 		expect(fileCard).toBeInstanceOf(HTMLElement);
 		expect(fileCard?.getAttribute("data-slot")).toBe("card");
-
-		await waitFor(() => {
-			expect(scrollIntoView).toHaveBeenCalledTimes(1);
-		});
 		expect(scrollIntoView.mock.instances[0]).toBe(fileCard);
 		expect(fileCard?.contains(fileHeader)).toBe(true);
 		expect(window.location.hash).toBe("#2");
 	});
 
-	it("isolates viewed state when navigating between PRs", () => {
+	it("isolates viewed state when navigating between PRs", async () => {
 		localStorage.clear();
 
 		const prA = fixturePr({ number: 100 });
 		const prB = fixturePr({ number: 200 });
-		const { rerender } = render(
-			<PrViewerShell
-				pr={prA}
-				status={PrViewerShellStatus.Ready}
-				paths={["packages/router/src/index.ts"]}
-				patch={TWO_FILE_PATCH}
-			/>,
-		);
-		switchToCodeTab();
+		const { rerender } = render(<PrViewerShell pr={prA} />);
+		await switchToCodeTab();
 
 		const headerA = screen.getByRole("button", {
 			name: /Mark packages\/router\/src\/index\.ts as viewed/,
@@ -542,16 +490,9 @@ describe("PrViewerShell", () => {
 		fireEvent.click(headerA);
 		expect(headerA.getAttribute("aria-expanded")).toBe("false");
 
-		rerender(
-			<PrViewerShell
-				pr={prB}
-				status={PrViewerShellStatus.Ready}
-				paths={["packages/router/src/index.ts"]}
-				patch={TWO_FILE_PATCH}
-			/>,
-		);
+		rerender(<PrViewerShell pr={prB} />);
 
-		switchToCodeTab();
+		await switchToCodeTab();
 		const headerB = screen.getByRole("button", {
 			name: /Mark packages\/router\/src\/index\.ts as viewed/,
 		});
@@ -559,14 +500,7 @@ describe("PrViewerShell", () => {
 	});
 
 	it("renders an importing state", () => {
-		render(
-			<PrViewerShell
-				pr={null}
-				status={PrViewerShellStatus.Importing}
-				paths={[]}
-				patch={null}
-			/>,
-		);
+		render(<PrViewerShell pr={null} />);
 
 		expect(
 			screen.getByText("Importing pull request from GitHub..."),
@@ -577,10 +511,7 @@ describe("PrViewerShell", () => {
 		render(
 			<PrViewerShell
 				pr={null}
-				status={PrViewerShellStatus.Error}
-				paths={[]}
-				patch={null}
-				error="Could not import pull request."
+				importError="Could not import pull request."
 			/>,
 		);
 

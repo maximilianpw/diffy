@@ -2,14 +2,10 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useAction, useQuery } from "convex/react";
 import { useCallback, useEffect, useState } from "react";
 import { Crumb, CrumbLink, CrumbSeparator, TopBar } from "#/components/top-bar";
-import {
-	type PrUpdateCheck,
-	PrViewerShellStatus,
-} from "#/features/pr-viewer/components/PrViewerShell";
+import type { PrUpdateCheck } from "#/features/pr-viewer/components/PrViewerShell";
 import { api } from "../../convex/_generated/api";
 import { PrViewerShell } from "../features/pr-viewer/components/PrViewerShell";
 import { usePrUpdatePolling } from "../features/pr-viewer/hooks/use-pr-update-polling";
-import { getChangedPathsFromPatch } from "../features/pr-viewer/model/diff-paths";
 import { shouldBackfillDiscussion } from "../features/pr-viewer/model/discussion-backfill";
 import { getImportErrorMessage } from "../features/pr-viewer/model/import-error-message";
 import { PullRequestState } from "../features/pr-viewer/model/pull-request.types";
@@ -49,12 +45,7 @@ function PrRouteForPullRequest({
 		repo,
 		number: prNumber,
 	});
-	const comments = useQuery(
-		api.pullRequests.listComments,
-		pr ? { pullRequestId: pr._id } : "skip",
-	);
-	const [patch, setPatch] = useState<string | null>(null);
-	const [error, setError] = useState<string | null>(null);
+	const [importError, setImportError] = useState<string | null>(null);
 	const [importStarted, setImportStarted] = useState(false);
 	const [discussionImportStarted, setDiscussionImportStarted] = useState(false);
 	const [isApplyingUpdate, setIsApplyingUpdate] = useState(false);
@@ -73,7 +64,7 @@ function PrRouteForPullRequest({
 
 		setImportStarted(true);
 		void importPr({ owner, repo, number: prNumber }).catch((cause) => {
-			setError(getImportErrorMessage(cause));
+			setImportError(getImportErrorMessage(cause));
 		});
 	}, [importPr, importStarted, owner, pr, prNumber, repo]);
 
@@ -87,47 +78,19 @@ function PrRouteForPullRequest({
 			repo,
 			number: prNumber,
 		}).catch((cause) => {
-			setError(getImportErrorMessage(cause));
+			setImportError(getImportErrorMessage(cause));
 		});
 	}, [discussionImportStarted, importDiscussion, owner, pr, prNumber, repo]);
 
-	useEffect(() => {
-		if (!pr?.diffUrl) return;
-
-		let cancelled = false;
-		void fetch(pr.diffUrl)
-			.then((response) => {
-				if (!response.ok)
-					throw new Error(`Diff fetch failed: ${response.status}`);
-				return response.text();
-			})
-			.then((text) => {
-				if (!cancelled) setPatch(text);
-			})
-			.catch((cause) => {
-				if (!cancelled) {
-					setError(
-						cause instanceof Error
-							? cause.message
-							: "Could not load pull request diff.",
-					);
-				}
-			});
-
-		return () => {
-			cancelled = true;
-		};
-	}, [pr?.diffUrl]);
-
 	const applyUpdate = useCallback(async () => {
 		setIsApplyingUpdate(true);
-		setError(null);
+		setImportError(null);
 		try {
 			await importPr({ owner, repo, number: prNumber });
 			polling.clearUpdatesAvailable();
 			polling.clearError();
 		} catch (cause) {
-			setError(getImportErrorMessage(cause));
+			setImportError(getImportErrorMessage(cause));
 		} finally {
 			setIsApplyingUpdate(false);
 		}
@@ -135,12 +98,6 @@ function PrRouteForPullRequest({
 
 	const onApplyUpdate = useCallback(() => void applyUpdate(), [applyUpdate]);
 
-	const status = error
-		? PrViewerShellStatus.Error
-		: patch
-			? PrViewerShellStatus.Ready
-			: PrViewerShellStatus.Importing;
-	const paths = patch ? getChangedPathsFromPatch(patch) : [];
 	const updateCheck: PrUpdateCheck | undefined =
 		pr?.state === PullRequestState.Open
 			? {
@@ -169,11 +126,7 @@ function PrRouteForPullRequest({
 			/>
 			<PrViewerShell
 				pr={pr ?? null}
-				comments={comments ?? []}
-				status={status}
-				paths={paths}
-				patch={patch}
-				error={error}
+				importError={importError}
 				updateCheck={updateCheck}
 			/>
 		</>

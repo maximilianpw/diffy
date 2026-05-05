@@ -1,6 +1,7 @@
 import { sidebarPageGridClassName } from "#/components/page-layout";
 import { useEffect, useRef, useState } from "react";
-import type { PrCommentDoc, PrDoc } from "../../../../../convex/doc-types";
+import type { PrDoc } from "../../../../../convex/doc-types";
+import { usePrDiff } from "../../hooks/use-pr-diff";
 import { useViewedFiles } from "../../hooks/use-viewed-files";
 import {
 	findFileIndexForFragment,
@@ -16,12 +17,8 @@ import { PrViewerTabButton } from "./PrViewerTabButton";
 export type { PrUpdateCheck } from "./PrUpdateNotice";
 
 type PrViewerShellProps = {
-	pr: PrDoc | null;
-	status: PrViewerShellStatus;
-	paths: string[];
-	patch: string | null;
-	comments?: PrCommentDoc[];
-	error?: string | null;
+	pr: (PrDoc & { diffUrl: string | null }) | null;
+	importError?: string | null;
 	updateCheck?: PrUpdateCheck;
 };
 
@@ -34,13 +31,19 @@ export enum PrViewerShellStatus {
 
 export function PrViewerShell({
 	pr,
-	comments = [],
-	status,
-	paths,
-	patch,
-	error,
+	importError,
 	updateCheck,
 }: PrViewerShellProps) {
+	const { patch, paths, error: diffError } = usePrDiff(
+		pr?.diffUrl ?? undefined,
+	);
+	const error = importError ?? diffError;
+	const status = error
+		? PrViewerShellStatus.Error
+		: pr && patch
+			? PrViewerShellStatus.Ready
+			: PrViewerShellStatus.Importing;
+
 	const [selectedTab, setSelectedTab] = useState<PrViewerTab>(() =>
 		findFileIndexForFragment(paths.length) === null
 			? PrViewerTab.Discussions
@@ -112,7 +115,6 @@ export function PrViewerShell({
 				{selectedTab === PrViewerTab.Discussions ? (
 					<PrViewerDiscussionsPanel
 						pr={pr}
-						comments={comments}
 						status={status}
 						error={error}
 						updateCheck={updateCheck}

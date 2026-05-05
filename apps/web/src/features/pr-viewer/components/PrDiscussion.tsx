@@ -1,10 +1,11 @@
-import type { PrCommentDoc, PrDoc } from "../../../../convex/doc-types";
+import { useQuery } from "convex/react";
+import { api } from "../../../../convex/_generated/api";
+import type { PrDoc } from "../../../../convex/doc-types";
 import { MarkdownContent } from "./MarkdownContent";
 import "./PrDiscussion.scss";
 
 type PrDiscussionProps = {
 	pr: PrDoc;
-	comments: PrCommentDoc[];
 };
 
 const dateFormatter = new Intl.DateTimeFormat("en-US", {
@@ -13,7 +14,9 @@ const dateFormatter = new Intl.DateTimeFormat("en-US", {
 	day: "numeric",
 });
 
-export function PrDiscussion({ pr, comments }: PrDiscussionProps) {
+export function PrDiscussion({ pr }: PrDiscussionProps) {
+	const comments =
+		useQuery(api.pullRequests.listComments, { pullRequestId: pr._id }) ?? [];
 	const body = pr.body?.trim();
 	if (!body && comments.length === 0) return null;
 
