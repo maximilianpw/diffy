@@ -1,29 +1,29 @@
-import type { Doc } from "../../../../../convex/_generated/dataModel";
+import type { PrDoc } from "../../../../../convex/doc-types";
 import { PrViewerShellStatus } from ".";
 import { DiffStack } from "./DiffStack";
 import { PrViewerStatusCard } from "./PrViewerStatusCard";
 import { PrViewerTabPanel } from "./PrViewerTabPanel";
 import { PrViewerTab } from "./pr-viewer-tabs";
 
-type PrDoc = Doc<"pullRequests">;
+type PrViewerCodePanelProps = {
+	pr: PrDoc | null;
+	status: PrViewerShellStatus;
+	paths: string[];
+	patch: string | null;
+	isViewed: (path: string) => boolean;
+	onToggleViewed: (path: string) => void;
+	error?: string | null;
+};
 
 export function PrViewerCodePanel({
 	pr,
 	status,
 	paths,
 	patch,
-	error,
 	isViewed,
 	onToggleViewed,
-}: {
-	pr: PrDoc | null;
-	status: PrViewerShellStatus;
-	paths: string[];
-	patch: string | null;
-	error?: string | null;
-	isViewed: (path: string) => boolean;
-	onToggleViewed: (path: string) => void;
-}) {
+	error,
+}: PrViewerCodePanelProps) {
 	if (
 		status === PrViewerShellStatus.Importing ||
 		status === PrViewerShellStatus.Error

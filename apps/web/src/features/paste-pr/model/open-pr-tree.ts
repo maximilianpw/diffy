@@ -1,4 +1,5 @@
-import type { Doc, Id } from "../../../../convex/_generated/dataModel";
+import type { PrDoc } from "../../../../convex/doc-types";
+import type { Id } from "../../../../convex/_generated/dataModel";
 
 export type OpenPrEntry = {
 	id: Id<"pullRequests">;
@@ -16,7 +17,7 @@ export type OpenPrTree = {
 const SLASH_REPLACEMENT = "∕";
 
 export function buildOpenPrTree(
-	prs: ReadonlyArray<Doc<"pullRequests">>,
+	prs: ReadonlyArray<PrDoc>,
 ): OpenPrTree {
 	const titleCounts = new Map<string, number>();
 	for (const p of prs) {

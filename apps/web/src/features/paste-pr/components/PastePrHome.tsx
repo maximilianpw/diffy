@@ -1,10 +1,15 @@
 import { useAuthActions, useConvexAuth } from "@convex-dev/auth/react";
 import { useState } from "react";
+import {
+	contentColumnClassName,
+	fullWidthContentClassName,
+} from "#/components/page-layout";
 import { Alert, AlertDescription } from "#/components/ui/alert";
 import { Button } from "#/components/ui/button";
 import { Card, CardContent, CardDescription } from "#/components/ui/card";
 import { Input } from "#/components/ui/input";
 import { Label } from "#/components/ui/label";
+import { cn } from "#/lib/utils";
 import { getPrPathFromSubmission } from "../model/parse-submission";
 
 type PastePrHomeProps = {
@@ -16,6 +21,9 @@ export function PastePrHome({ navigateToPr }: PastePrHomeProps) {
 	const { signIn } = useAuthActions();
 	const [value, setValue] = useState("");
 	const [error, setError] = useState<string | null>(null);
+	const homePlacementClassName = isAuthenticated
+		? contentColumnClassName
+		: fullWidthContentClassName;
 
 	function onSubmit(event: React.FormEvent<HTMLFormElement>) {
 		event.preventDefault();
@@ -36,8 +44,16 @@ export function PastePrHome({ navigateToPr }: PastePrHomeProps) {
 	}
 
 	return (
-		<main className="relative mx-auto flex min-h-[calc(100vh-3rem)] w-full max-w-3xl flex-col justify-center px-6 py-16">
-			<div className="flex flex-col gap-10">
+		<main
+			className={cn(
+				"relative flex min-h-[calc(100vh-3rem)] min-w-0 w-full flex-col justify-center px-6 py-16",
+				homePlacementClassName,
+			)}
+		>
+			<div
+				data-testid="paste-pr-home-content"
+				className="mx-auto flex w-full max-w-5xl flex-col gap-10"
+			>
 				<div className="flex flex-col gap-3">
 					<p className="font-mono text-[11px] uppercase tracking-[0.2em] text-muted-foreground">
 						Diffy / pull request viewer

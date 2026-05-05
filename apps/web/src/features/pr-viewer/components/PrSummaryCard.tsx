@@ -1,11 +1,9 @@
 import { Badge } from "#/components/ui/badge";
-import type { Doc } from "../../../../convex/_generated/dataModel";
+import type { PrDoc } from "../../../../convex/doc-types";
 import {
 	PullRequestStateBadgeVariant,
 	PullRequestStateLabel,
 } from "../model/pull-request.types";
-
-type PrDoc = Doc<"pullRequests">;
 
 type PrSummaryCardProps = {
 	pr: PrDoc;

@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { sidebarPageGridClassName } from "#/components/page-layout";
 import { Crumb, TopBar } from "#/components/top-bar";
 import { OpenPrsSidebar } from "../features/paste-pr/components/OpenPrsSidebar";
 import { PastePrHome } from "../features/paste-pr/components/PastePrHome";
@@ -11,7 +12,7 @@ function Home() {
 	return (
 		<>
 			<TopBar breadcrumb={<Crumb>Diffy</Crumb>} />
-			<div className="grid min-h-[calc(100vh-3rem)] grid-cols-1 lg:grid-cols-[280px_1fr]">
+			<div className={sidebarPageGridClassName}>
 				<OpenPrsSidebar
 					onSelect={({ owner, repo, number }) =>
 						navigate({

@@ -1,20 +1,19 @@
-import { cn } from "#/lib/utils";
+import { sidebarPageGridClassName } from "#/components/page-layout";
 import { useEffect, useRef, useState } from "react";
-import type { Doc } from "../../../../../convex/_generated/dataModel";
+import type { PrCommentDoc, PrDoc } from "../../../../../convex/doc-types";
 import { useViewedFiles } from "../../hooks/use-viewed-files";
 import {
 	findFileIndexForFragment,
 	jumpToFileFragment,
 } from "../../model/file-fragment";
 import { ChangedFilesTree } from "../ChangedFilesTree";
+import { PrViewerTab } from "./pr-viewer-tabs";
 import type { PrUpdateCheck } from "./PrUpdateNotice";
 import { PrViewerCodePanel } from "./PrViewerCodePanel";
 import { PrViewerDiscussionsPanel } from "./PrViewerDiscussionsPanel";
-import { PrViewerTab, prViewerTabs } from "./pr-viewer-tabs";
-export type { PrUpdateCheck } from "./PrUpdateNotice";
+import { PrViewerTabButton } from "./PrViewerTabButton";
 
-type PrDoc = Doc<"pullRequests">;
-type PrCommentDoc = Doc<"pullRequestComments">;
+export type { PrUpdateCheck } from "./PrUpdateNotice";
 
 type PrViewerShellProps = {
 	pr: PrDoc | null;
@@ -80,7 +79,7 @@ export function PrViewerShell({
 	}
 
 	return (
-		<div className="grid min-h-[calc(100vh-3rem)] grid-cols-1 lg:grid-cols-[280px_1fr]">
+		<div className={sidebarPageGridClassName}>
 			<ChangedFilesTree
 				key={treeKey}
 				paths={paths}
@@ -91,7 +90,7 @@ export function PrViewerShell({
 
 			<section
 				aria-label="Pull request preview"
-				className="flex flex-col px-6 py-8 lg:px-10"
+				className="flex min-w-0 flex-col px-6 py-8 lg:px-10"
 			>
 				<div
 					aria-label="Pull request sections"
@@ -131,37 +130,5 @@ export function PrViewerShell({
 				)}
 			</section>
 		</div>
-	);
-}
-
-function PrViewerTabButton({
-	tab,
-	onSelect,
-	selectedTab,
-}: {
-	tab: PrViewerTab;
-	onSelect: (tab: PrViewerTab) => void;
-	selectedTab: PrViewerTab;
-}) {
-	const tabConfig = prViewerTabs[tab];
-	const selected = tab === selectedTab;
-
-	return (
-		<button
-			aria-controls={tabConfig.panelId}
-			aria-selected={selected}
-			className={cn(
-				"-mb-px border-b-2 px-3 py-2 font-medium text-sm transition-colors",
-				selected
-					? "border-foreground text-foreground"
-					: "border-transparent text-muted-foreground hover:text-foreground",
-			)}
-			id={tabConfig.id}
-			onClick={() => onSelect(tab)}
-			role="tab"
-			type="button"
-		>
-			{tabConfig.label}
-		</button>
 	);
 }

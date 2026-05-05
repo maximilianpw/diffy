@@ -1,18 +1,18 @@
 import { describe, expect, it } from "vitest";
-import type { Doc } from "../../../../convex/_generated/dataModel";
+import type { PrDoc } from "../../../../convex/doc-types";
 import { PullRequestState } from "../../pr-viewer/model/pull-request.types";
 import { buildOpenPrTree } from "./open-pr-tree";
 
 function pr(
-	overrides: Partial<Doc<"pullRequests">> & {
+	overrides: Partial<PrDoc> & {
 		owner: string;
 		repo: string;
 		number: number;
 		title: string;
 	},
-): Doc<"pullRequests"> {
+): PrDoc {
 	return {
-		_id: `pr_${overrides.owner}_${overrides.repo}_${overrides.number}` as Doc<"pullRequests">["_id"],
+		_id: `pr_${overrides.owner}_${overrides.repo}_${overrides.number}` as PrDoc["_id"],
 		_creationTime: 0,
 		authorLogin: "octocat",
 		authorAvatarUrl: "https://example.com/a.png",
@@ -23,7 +23,7 @@ function pr(
 		baseSha: "a",
 		headSha: "b",
 		htmlUrl: `https://github.com/${overrides.owner}/${overrides.repo}/pull/${overrides.number}`,
-		diffStorageId: "storage_x" as Doc<"pullRequests">["diffStorageId"],
+		diffStorageId: "storage_x" as PrDoc["diffStorageId"],
 		diffByteSize: 0,
 		importedAt: 0,
 		lastViewedAt: 0,

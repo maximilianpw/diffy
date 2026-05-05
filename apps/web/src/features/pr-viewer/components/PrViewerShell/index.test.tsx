@@ -6,7 +6,7 @@ import {
 	within,
 } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { Doc } from "../../../../../convex/_generated/dataModel";
+import type { PrCommentDoc, PrDoc } from "../../../../../convex/doc-types";
 import { PullRequestState } from "../../model/pull-request.types";
 import { PrViewerShell, PrViewerShellStatus } from ".";
 import { PrUpdateCheckStatus } from "./pr-update-notice-copy";
@@ -28,10 +28,10 @@ index 3333333..4444444 100644
 `;
 
 function fixturePr(
-	overrides: Partial<Doc<"pullRequests">> = {},
-): Doc<"pullRequests"> {
+	overrides: Partial<PrDoc> = {},
+): PrDoc {
 	return {
-		_id: "pr_test" as Doc<"pullRequests">["_id"],
+		_id: "pr_test" as PrDoc["_id"],
 		_creationTime: 0,
 		owner: "tanstack",
 		repo: "router",
@@ -46,7 +46,7 @@ function fixturePr(
 		baseSha: "aaa",
 		headSha: "bbb",
 		htmlUrl: "https://github.com/tanstack/router/pull/123",
-		diffStorageId: "storage_test" as Doc<"pullRequests">["diffStorageId"],
+		diffStorageId: "storage_test" as PrDoc["diffStorageId"],
 		diffByteSize: 1234,
 		importedAt: new Date("2026-04-12T00:00:00Z").getTime(),
 		lastViewedAt: new Date("2026-04-12T00:00:00Z").getTime(),
@@ -56,12 +56,12 @@ function fixturePr(
 }
 
 function fixtureComment(
-	overrides: Partial<Doc<"pullRequestComments">> = {},
-): Doc<"pullRequestComments"> {
+	overrides: Partial<PrCommentDoc> = {},
+): PrCommentDoc {
 	return {
-		_id: "comment_test" as Doc<"pullRequestComments">["_id"],
+		_id: "comment_test" as PrCommentDoc["_id"],
 		_creationTime: 0,
-		pullRequestId: "pr_test" as Doc<"pullRequestComments">["pullRequestId"],
+		pullRequestId: "pr_test" as PrCommentDoc["pullRequestId"],
 		githubId: 456,
 		authorLogin: "tkdodo",
 		authorAvatarUrl: "https://example.com/commenter.png",
@@ -149,6 +149,18 @@ describe("PrViewerShell", () => {
 		expect(
 			screen.getByRole("region", { name: "Pull request preview" }),
 		).toBeTruthy();
+		expect(
+			screen
+				.getByRole("region", { name: "Pull request preview" })
+				.parentElement?.classList.contains(
+					"lg:grid-cols-[280px_minmax(0,1fr)]",
+				),
+		).toBe(true);
+		expect(
+			screen
+				.getByRole("region", { name: "Pull request preview" })
+				.classList.contains("min-w-0"),
+		).toBe(true);
 		const region = switchToCodeTab();
 		expect(
 			within(region).getByText("packages/router/src/index.ts"),

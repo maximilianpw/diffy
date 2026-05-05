@@ -34,6 +34,30 @@ describe("PastePrHome", () => {
 		expect(
 			screen.getByRole("heading", { name: /Read a pull request/ }),
 		).toBeTruthy();
+		expect(screen.getByRole("main").classList.contains("max-w-3xl")).toBe(
+			false,
+		);
+	});
+
+	it("uses the content column when the open PR sidebar is visible", () => {
+		render(<PastePrHome navigateToPr={vi.fn()} />);
+
+		expect(screen.getByRole("main").classList.contains("lg:col-start-2")).toBe(
+			true,
+		);
+	});
+
+	it("centers across the full page when the signed-out sidebar is hidden", () => {
+		authState.isAuthenticated = false;
+
+		render(<PastePrHome navigateToPr={vi.fn()} />);
+
+		expect(screen.getByRole("main").classList.contains("lg:col-span-2")).toBe(
+			true,
+		);
+		expect(screen.getByTestId("paste-pr-home-content").classList).toContain(
+			"mx-auto",
+		);
 	});
 
 	it("navigates to the canonical PR route for a GitHub PR URL", () => {

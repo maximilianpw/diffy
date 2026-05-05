@@ -1,14 +1,14 @@
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
-import type { Doc } from "../../../../convex/_generated/dataModel";
+import type { PrDoc } from "../../../../convex/doc-types";
 import { PullRequestState } from "../model/pull-request.types";
 import { PrSummaryCard } from "./PrSummaryCard";
 
 function fixturePr(
-	overrides: Partial<Doc<"pullRequests">> = {},
-): Doc<"pullRequests"> {
+	overrides: Partial<PrDoc> = {},
+): PrDoc {
 	return {
-		_id: "pr_test" as Doc<"pullRequests">["_id"],
+		_id: "pr_test" as PrDoc["_id"],
 		_creationTime: 0,
 		owner: "tanstack",
 		repo: "router",
@@ -23,7 +23,7 @@ function fixturePr(
 		baseSha: "aaa",
 		headSha: "bbb",
 		htmlUrl: "https://github.com/tanstack/router/pull/123",
-		diffStorageId: "storage_test" as Doc<"pullRequests">["diffStorageId"],
+		diffStorageId: "storage_test" as PrDoc["diffStorageId"],
 		diffByteSize: 1234,
 		importedAt: new Date("2026-04-12T00:00:00Z").getTime(),
 		lastViewedAt: new Date("2026-04-12T00:00:00Z").getTime(),

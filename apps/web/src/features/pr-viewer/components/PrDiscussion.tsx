@@ -1,9 +1,6 @@
-import type { Doc } from "../../../../convex/_generated/dataModel";
+import type { PrCommentDoc, PrDoc } from "../../../../convex/doc-types";
 import { MarkdownContent } from "./MarkdownContent";
 import "./PrDiscussion.scss";
-
-type PrDoc = Doc<"pullRequests">;
-type PrCommentDoc = Doc<"pullRequestComments">;
 
 type PrDiscussionProps = {
 	pr: PrDoc;

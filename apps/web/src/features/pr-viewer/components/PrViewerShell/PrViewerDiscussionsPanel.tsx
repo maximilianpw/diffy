@@ -1,4 +1,4 @@
-import type { Doc } from "../../../../../convex/_generated/dataModel";
+import type { PrCommentDoc, PrDoc } from "../../../../../convex/doc-types";
 import { PrDiscussion } from "../PrDiscussion";
 import { PrSummaryCard } from "../PrSummaryCard";
 import type { PrViewerShellStatus } from ".";
@@ -6,9 +6,6 @@ import { type PrUpdateCheck, PrUpdateNotice } from "./PrUpdateNotice";
 import { PrViewerStatusCard } from "./PrViewerStatusCard";
 import { PrViewerTabPanel } from "./PrViewerTabPanel";
 import { PrViewerTab } from "./pr-viewer-tabs";
-
-type PrDoc = Doc<"pullRequests">;
-type PrCommentDoc = Doc<"pullRequestComments">;
 
 export function PrViewerDiscussionsPanel({
 	pr,
