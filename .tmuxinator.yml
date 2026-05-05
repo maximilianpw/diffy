@@ -1,0 +1,8 @@
+name: diffy
+root: /Users/max-vev/Local/diffy
+
+windows:
+  - neovim: nvim
+  - codex: codex --yolo
+  - terminal: jj st
+  - dev: bun run dev
