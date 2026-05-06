@@ -1,4 +1,5 @@
 import type { PrDoc } from "../../../../../convex/docTypes";
+import type { DiffLocationTarget } from "../../model/diff-location";
 import { PrViewerShellStatus } from ".";
 import { DiffStack } from "./DiffStack";
 import { PrViewerStatusCard } from "./PrViewerStatusCard";
@@ -11,7 +12,9 @@ type PrViewerCodePanelProps = {
 	paths: string[];
 	patch: string | null;
 	isViewed: (path: string) => boolean;
+	selectedDiffLocation?: DiffLocationTarget | null;
 	onToggleViewed: (path: string) => void;
+	onDiffRendered?: (path: string) => void;
 	error?: string | null;
 };
 
@@ -21,7 +24,9 @@ export function PrViewerCodePanel({
 	paths,
 	patch,
 	isViewed,
+	selectedDiffLocation,
 	onToggleViewed,
+	onDiffRendered,
 	error,
 }: PrViewerCodePanelProps) {
 	if (
@@ -49,7 +54,9 @@ export function PrViewerCodePanel({
 				patch={patch}
 				paths={paths}
 				isViewed={isViewed}
+				selectedDiffLocation={selectedDiffLocation}
 				onToggleViewed={onToggleViewed}
+				onDiffRendered={onDiffRendered}
 			/>
 		</PrViewerTabPanel>
 	);

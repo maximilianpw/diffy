@@ -1,6 +1,7 @@
 import { useQuery } from "convex/react";
 import { api } from "../../../../../convex/_generated/api";
 import type { PrDoc } from "../../../../../convex/docTypes";
+import type { DiffLocationTarget } from "../../model/diff-location";
 import {
 	DiscussionTimelineItemType,
 	getDiscussionTimelineItems,
@@ -12,9 +13,10 @@ import { ReviewCommentContext } from "./ReviewCommentContext";
 
 type PrDiscussionProps = {
 	pr: PrDoc;
+	onJumpToDiffLocation?: (target: DiffLocationTarget) => void;
 };
 
-export function PrDiscussion({ pr }: PrDiscussionProps) {
+export function PrDiscussion({ pr, onJumpToDiffLocation }: PrDiscussionProps) {
 	const comments =
 		useQuery(api.pullRequests.listComments, { pullRequestId: pr._id }) ?? [];
 	const reviewComments =
@@ -56,7 +58,12 @@ export function PrDiscussion({ pr }: PrDiscussionProps) {
 						isAuthor={item.comment.authorLogin === pr.authorLogin}
 						body={item.comment.body}
 						bodyContent={<ReviewCommentBody comment={item.comment} />}
-						reviewContext={<ReviewCommentContext comment={item.comment} />}
+						reviewContext={
+							<ReviewCommentContext
+								comment={item.comment}
+								onJumpToDiffLocation={onJumpToDiffLocation}
+							/>
+						}
 					/>
 				),
 			)}

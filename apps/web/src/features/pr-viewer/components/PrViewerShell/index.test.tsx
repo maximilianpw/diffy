@@ -460,6 +460,158 @@ throw retryable;
 		);
 	});
 
+	it("jumps from a review comment hunk to its full diff location", async () => {
+		queryState.reviewComments = [fixtureReviewComment()];
+
+		render(<PrViewerShell pr={fixturePr()} />);
+
+		const discussion = screen.getByRole("region", {
+			name: "Pull request discussion",
+		});
+		fireEvent.click(
+			within(discussion).getByRole("button", {
+				name: "View packages/router/src/index.ts:1 in full diff",
+			}),
+		);
+
+		const codeTab = screen.getByRole("tab", { name: "Code" });
+		const discussionsTab = screen.getByRole("tab", { name: "Discussions" });
+		expect(codeTab.getAttribute("aria-selected")).toBe("true");
+		expect(discussionsTab.getAttribute("aria-selected")).toBe("false");
+
+		await waitFor(() => {
+			expect(scrollIntoView).toHaveBeenCalledTimes(1);
+		});
+		expect(window.location.hash).toBe("#1");
+		expect(PatchDiff).toHaveBeenCalledWith(
+			expect.objectContaining({
+				patch: expect.stringContaining(
+					"diff --git a/packages/router/src/index.ts",
+				),
+				selectedLines: {
+					start: 1,
+					end: 1,
+					side: "additions",
+					endSide: "additions",
+				},
+			}),
+			undefined,
+		);
+	});
+
+	it("retries review comment line jumps after the full diff finishes rendering", async () => {
+		queryState.reviewComments = [fixtureReviewComment()];
+
+		render(<PrViewerShell pr={fixturePr()} />);
+
+		fireEvent.click(
+			screen.getByRole("button", {
+				name: "View packages/router/src/index.ts:1 in full diff",
+			}),
+		);
+
+		await waitFor(() => {
+			expect(scrollIntoView).toHaveBeenCalledTimes(1);
+		});
+		const fileCard = document.getElementById("1");
+		expect(fileCard).toBeInstanceOf(HTMLElement);
+		const renderedDiff = document.createElement("diffs-container");
+		renderedDiff.innerHTML = `<code data-additions><div data-column-number="1">1</div></code>`;
+		fileCard?.appendChild(renderedDiff);
+
+		const fullDiffCall = vi
+			.mocked(PatchDiff)
+			.mock.calls.find(
+				([props]) =>
+					props.patch.includes("diff --git a/packages/router/src/index.ts") &&
+					props.selectedLines != null,
+			);
+		expect(fullDiffCall?.[0].options?.onPostRender).toBeTypeOf("function");
+		fullDiffCall?.[0].options?.onPostRender?.(renderedDiff, {} as never);
+
+		await waitFor(() => {
+			expect(scrollIntoView).toHaveBeenCalledTimes(2);
+		});
+		expect(scrollIntoView.mock.instances[1]).toBe(
+			renderedDiff.querySelector("[data-column-number='1']"),
+		);
+		expect(scrollIntoView.mock.calls[1]?.[0]).toMatchObject({
+			block: "center",
+		});
+	});
+
+	it("expands a viewed file before jumping from a review comment", async () => {
+		queryState.reviewComments = [fixtureReviewComment()];
+
+		render(<PrViewerShell pr={fixturePr()} />);
+		await switchToCodeTab();
+
+		const fileHeader = screen.getByRole("button", {
+			name: /Mark packages\/router\/src\/index\.ts as viewed/,
+		});
+		fireEvent.click(fileHeader);
+		expect(fileHeader.getAttribute("aria-expanded")).toBe("false");
+
+		fireEvent.click(screen.getByRole("tab", { name: "Discussions" }));
+		fireEvent.click(
+			screen.getByRole("button", {
+				name: "View packages/router/src/index.ts:1 in full diff",
+			}),
+		);
+
+		await waitFor(() => {
+			expect(
+				screen
+					.getByRole("button", {
+						name: /Mark packages\/router\/src\/index\.ts as viewed/,
+					})
+					.getAttribute("aria-expanded"),
+			).toBe("true");
+		});
+		expect(screen.getByRole("tabpanel", { name: "Code" })).toBeTruthy();
+		expect(PatchDiff).toHaveBeenCalledWith(
+			expect.objectContaining({
+				patch: expect.stringContaining(
+					"diff --git a/packages/router/src/index.ts",
+				),
+				selectedLines: expect.objectContaining({
+					start: 1,
+					end: 1,
+				}),
+			}),
+			undefined,
+		);
+	});
+
+	it("clears a review comment line selection when another file is selected", async () => {
+		queryState.reviewComments = [fixtureReviewComment()];
+
+		render(<PrViewerShell pr={fixturePr()} />);
+
+		fireEvent.click(
+			screen.getByRole("button", {
+				name: "View packages/router/src/index.ts:1 in full diff",
+			}),
+		);
+		const fileRow = await findTreeFileRow("packages/router/src/util.ts");
+		vi.mocked(PatchDiff).mockClear();
+
+		fireEvent.mouseDown(fileRow);
+		fireEvent.click(fileRow);
+
+		await waitFor(() => {
+			expect(PatchDiff).toHaveBeenCalledWith(
+				expect.objectContaining({
+					patch: expect.stringContaining(
+						"diff --git a/packages/router/src/index.ts",
+					),
+					selectedLines: null,
+				}),
+				undefined,
+			);
+		});
+	});
+
 	it("offers Update without a Pause control when a newer PR version is available", () => {
 		const onApplyUpdate = vi.fn();
 		const onToggleAutoCheck = vi.fn();

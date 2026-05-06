@@ -1,3 +1,4 @@
+import type { SelectedLineRange } from "@pierre/diffs";
 import { PatchDiff } from "@pierre/diffs/react";
 import { Card } from "#/components/ui/card";
 import { cn } from "#/lib/utils";
@@ -10,7 +11,9 @@ type FileCardProps = {
 	path: string;
 	patch: string;
 	viewed: boolean;
+	selectedLines?: SelectedLineRange | null;
 	onToggleViewed: () => void;
+	onDiffRendered?: (path: string) => void;
 };
 
 export function FileCard({
@@ -18,11 +21,19 @@ export function FileCard({
 	path,
 	patch,
 	viewed,
+	selectedLines = null,
 	onToggleViewed,
+	onDiffRendered,
 }: FileCardProps) {
 	const { additions, deletions } = countDiffStats(patch);
 	const headerId = getFileFragmentId(fileIndex);
 	const bodyId = `${headerId}-body`;
+	const diffOptions = onDiffRendered
+		? {
+				...FULL_DIFF_VIEWER_OPTIONS,
+				onPostRender: () => onDiffRendered(path),
+			}
+		: FULL_DIFF_VIEWER_OPTIONS;
 
 	return (
 		<Card
@@ -68,7 +79,11 @@ export function FileCard({
 			</button>
 			{viewed ? null : (
 				<div id={bodyId}>
-					<PatchDiff patch={patch} options={FULL_DIFF_VIEWER_OPTIONS} />
+					<PatchDiff
+						patch={patch}
+						options={diffOptions}
+						selectedLines={selectedLines}
+					/>
 				</div>
 			)}
 		</Card>

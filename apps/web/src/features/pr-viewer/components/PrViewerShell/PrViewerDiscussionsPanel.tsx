@@ -1,4 +1,5 @@
 import type { PrDoc } from "../../../../../convex/docTypes";
+import type { DiffLocationTarget } from "../../model/diff-location";
 import { PrDiscussion } from "../PrDiscussion";
 import { PrSummaryCard } from "../PrSummaryCard";
 import type { PrViewerShellStatus } from ".";
@@ -12,17 +13,21 @@ export function PrViewerDiscussionsPanel({
 	status,
 	error,
 	updateCheck,
+	onJumpToDiffLocation,
 }: {
 	pr: PrDoc | null;
 	status: PrViewerShellStatus;
 	error?: string | null;
 	updateCheck?: PrUpdateCheck;
+	onJumpToDiffLocation?: (target: DiffLocationTarget) => void;
 }) {
 	return (
 		<PrViewerTabPanel tab={PrViewerTab.Discussions}>
 			{pr ? <PrSummaryCard pr={pr} /> : null}
 			{updateCheck ? <PrUpdateNotice updateCheck={updateCheck} /> : null}
-			{pr ? <PrDiscussion pr={pr} /> : null}
+			{pr ? (
+				<PrDiscussion pr={pr} onJumpToDiffLocation={onJumpToDiffLocation} />
+			) : null}
 			<PrViewerStatusCard status={status} error={error} />
 		</PrViewerTabPanel>
 	);
