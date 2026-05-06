@@ -2,6 +2,7 @@ import { PatchDiff } from "@pierre/diffs/react";
 import { Card } from "#/components/ui/card";
 import { cn } from "#/lib/utils";
 import { countDiffStats } from "../model/diff-stats";
+import { FULL_DIFF_VIEWER_OPTIONS } from "../model/diff-viewer-options";
 import { getFileFragmentId } from "../model/file-fragment";
 
 type FileCardProps = {
@@ -67,7 +68,7 @@ export function FileCard({
 			</button>
 			{viewed ? null : (
 				<div id={bodyId}>
-					<PatchDiff patch={patch} options={{ theme: "vesper" }} />
+					<PatchDiff patch={patch} options={FULL_DIFF_VIEWER_OPTIONS} />
 				</div>
 			)}
 		</Card>

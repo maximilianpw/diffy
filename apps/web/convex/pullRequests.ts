@@ -1,6 +1,9 @@
 import { ConvexError, v } from 'convex/values';
 import { getAuthUserId } from '@convex-dev/auth/server';
-import { PullRequestState } from '@diffy/shared';
+import {
+	PullRequestReviewCommentSide,
+	PullRequestState,
+} from '@diffy/shared';
 import type { Id } from './_generated/dataModel';
 import { internal } from './_generated/api';
 import {
@@ -23,6 +26,11 @@ const pullRequestStateValidator = v.union(
 	v.literal(PullRequestState.Merged),
 );
 
+const pullRequestReviewCommentSideValidator = v.union(
+	v.literal(PullRequestReviewCommentSide.Left),
+	v.literal(PullRequestReviewCommentSide.Right),
+);
+
 type GitHubPrMeta = {
 	title: string;
 	body: string | null;
@@ -40,6 +48,26 @@ type GitHubIssueComment = {
 	body: string;
 	html_url: string;
 	user: { login: string; avatar_url: string } | null;
+	created_at: string;
+	updated_at: string;
+};
+
+type GitHubReviewComment = {
+	id: number;
+	pull_request_review_id: number | null;
+	body: string;
+	html_url: string;
+	user: { login: string; avatar_url: string } | null;
+	diff_hunk: string;
+	path: string;
+	position: number | null;
+	original_position: number | null;
+	line?: number | null;
+	original_line?: number | null;
+	start_line?: number | null;
+	original_start_line?: number | null;
+	side?: PullRequestReviewCommentSide | null;
+	start_side?: PullRequestReviewCommentSide | null;
 	created_at: string;
 	updated_at: string;
 };
@@ -82,6 +110,7 @@ const prFields = {
 	latestVersionId: v.optional(v.id('pullRequestVersions')),
 	latestVersionNumber: v.optional(v.number()),
 	discussionImportedAt: v.optional(v.number()),
+	reviewCommentsImportedAt: v.optional(v.number()),
 };
 
 const prVersionFields = {
@@ -108,6 +137,28 @@ const prCommentFields = {
 	updatedAt: v.number(),
 };
 
+const prReviewCommentFields = {
+	pullRequestId: v.id('pullRequests'),
+	githubId: v.number(),
+	pullRequestReviewId: v.optional(v.number()),
+	authorLogin: v.string(),
+	authorAvatarUrl: v.string(),
+	body: v.string(),
+	htmlUrl: v.string(),
+	path: v.string(),
+	diffHunk: v.string(),
+	side: v.optional(pullRequestReviewCommentSideValidator),
+	startSide: v.optional(pullRequestReviewCommentSideValidator),
+	line: v.optional(v.number()),
+	originalLine: v.optional(v.number()),
+	startLine: v.optional(v.number()),
+	originalStartLine: v.optional(v.number()),
+	position: v.optional(v.number()),
+	originalPosition: v.optional(v.number()),
+	createdAt: v.number(),
+	updatedAt: v.number(),
+};
+
 const prDoc = v.object({
 	_id: v.id('pullRequests'),
 	_creationTime: v.number(),
@@ -118,6 +169,12 @@ const prCommentDoc = v.object({
 	_id: v.id('pullRequestComments'),
 	_creationTime: v.number(),
 	...prCommentFields,
+});
+
+const prReviewCommentDoc = v.object({
+	_id: v.id('pullRequestReviewComments'),
+	_creationTime: v.number(),
+	...prReviewCommentFields,
 });
 
 const prVersionDoc = v.object({
@@ -168,12 +225,54 @@ const commentValidator = v.object({
 	updatedAt: v.number(),
 });
 
+const reviewCommentValidator = v.object({
+	githubId: v.number(),
+	pullRequestReviewId: v.optional(v.number()),
+	authorLogin: v.string(),
+	authorAvatarUrl: v.string(),
+	body: v.string(),
+	htmlUrl: v.string(),
+	path: v.string(),
+	diffHunk: v.string(),
+	side: v.optional(pullRequestReviewCommentSideValidator),
+	startSide: v.optional(pullRequestReviewCommentSideValidator),
+	line: v.optional(v.number()),
+	originalLine: v.optional(v.number()),
+	startLine: v.optional(v.number()),
+	originalStartLine: v.optional(v.number()),
+	position: v.optional(v.number()),
+	originalPosition: v.optional(v.number()),
+	createdAt: v.number(),
+	updatedAt: v.number(),
+});
+
 type StoredComment = {
 	githubId: number;
 	authorLogin: string;
 	authorAvatarUrl: string;
 	body: string;
 	htmlUrl: string;
+	createdAt: number;
+	updatedAt: number;
+};
+
+type StoredReviewComment = {
+	githubId: number;
+	pullRequestReviewId?: number;
+	authorLogin: string;
+	authorAvatarUrl: string;
+	body: string;
+	htmlUrl: string;
+	path: string;
+	diffHunk: string;
+	side?: PullRequestReviewCommentSide;
+	startSide?: PullRequestReviewCommentSide;
+	line?: number;
+	originalLine?: number;
+	startLine?: number;
+	originalStartLine?: number;
+	position?: number;
+	originalPosition?: number;
 	createdAt: number;
 	updatedAt: number;
 };
@@ -209,10 +308,16 @@ export const importPr = action({
 		};
 		const url = `${GITHUB_API}/repos/${owner}/${repo}/pulls/${number}`;
 		const commentsUrl = `${GITHUB_API}/repos/${owner}/${repo}/issues/${number}/comments?per_page=100`;
+		const reviewCommentsUrl = `${GITHUB_API}/repos/${owner}/${repo}/pulls/${number}/comments?per_page=100`;
 
-		const [metaRes, comments]: [Response, GitHubIssueComment[]] = await Promise.all([
+		const [metaRes, comments, reviewComments]: [
+			Response,
+			GitHubIssueComment[],
+			GitHubReviewComment[],
+		] = await Promise.all([
 			fetch(url, { headers: { ...baseHeaders, Accept: 'application/vnd.github+json' } }),
 			fetchGitHubIssueComments(commentsUrl, baseHeaders),
+			fetchGitHubReviewComments(reviewCommentsUrl, baseHeaders),
 		]);
 
 		if (!metaRes.ok) {
@@ -279,6 +384,7 @@ export const importPr = action({
 			reuseVersionId: existingVersion?.versionId,
 			reuseVersionNumber: existingVersion?.versionNumber,
 			comments: comments.map(toStoredComment),
+			reviewComments: reviewComments.map(toStoredReviewComment),
 		});
 	},
 });
@@ -370,10 +476,16 @@ export const importDiscussion = action({
 		};
 		const url = `${GITHUB_API}/repos/${owner}/${repo}/pulls/${number}`;
 		const commentsUrl = `${GITHUB_API}/repos/${owner}/${repo}/issues/${number}/comments?per_page=100`;
+		const reviewCommentsUrl = `${GITHUB_API}/repos/${owner}/${repo}/pulls/${number}/comments?per_page=100`;
 
-		const [metaRes, comments]: [Response, GitHubIssueComment[]] = await Promise.all([
+		const [metaRes, comments, reviewComments]: [
+			Response,
+			GitHubIssueComment[],
+			GitHubReviewComment[],
+		] = await Promise.all([
 			fetch(url, { headers: { ...baseHeaders, Accept: 'application/vnd.github+json' } }),
 			fetchGitHubIssueComments(commentsUrl, baseHeaders),
+			fetchGitHubReviewComments(reviewCommentsUrl, baseHeaders),
 		]);
 
 		if (!metaRes.ok) {
@@ -387,13 +499,16 @@ export const importDiscussion = action({
 		}
 
 		const meta = (await metaRes.json()) as GitHubPrMeta;
+		const importedAt = Date.now();
 
 		await ctx.runMutation(internal.pullRequests.replaceDiscussion, {
 			pullRequestId,
 			body: meta.body,
 			githubUpdatedAt: new Date(meta.updated_at).getTime(),
-			discussionImportedAt: Date.now(),
+			discussionImportedAt: importedAt,
+			reviewCommentsImportedAt: importedAt,
 			comments: comments.map(toStoredComment),
+			reviewComments: reviewComments.map(toStoredReviewComment),
 		});
 
 		return null;
@@ -508,6 +623,7 @@ export const recordImport = internalMutation({
 		reuseVersionId: v.optional(v.id('pullRequestVersions')),
 		reuseVersionNumber: v.optional(v.number()),
 		comments: v.array(commentValidator),
+		reviewComments: v.array(reviewCommentValidator),
 	},
 	returns: v.id('pullRequests'),
 	handler: async (ctx, args) => {
@@ -537,6 +653,7 @@ export const recordImport = internalMutation({
 			githubUpdatedAt: args.githubUpdatedAt,
 			lastViewedAt: args.importedAt,
 			discussionImportedAt: args.importedAt,
+			reviewCommentsImportedAt: args.importedAt,
 		};
 
 		let pullRequestId: Id<'pullRequests'>;
@@ -589,6 +706,7 @@ export const recordImport = internalMutation({
 		});
 
 		await replacePullRequestComments(ctx, pullRequestId, args.comments);
+		await replacePullRequestReviewComments(ctx, pullRequestId, args.reviewComments);
 
 		return pullRequestId;
 	},
@@ -600,20 +718,32 @@ export const replaceDiscussion = internalMutation({
 		body: v.union(v.string(), v.null()),
 		githubUpdatedAt: v.number(),
 		discussionImportedAt: v.number(),
+		reviewCommentsImportedAt: v.number(),
 		comments: v.array(commentValidator),
+		reviewComments: v.array(reviewCommentValidator),
 	},
 	returns: v.null(),
 	handler: async (
 		ctx,
-		{ pullRequestId, body, githubUpdatedAt, discussionImportedAt, comments },
+		{
+			pullRequestId,
+			body,
+			githubUpdatedAt,
+			discussionImportedAt,
+			reviewCommentsImportedAt,
+			comments,
+			reviewComments,
+		},
 	) => {
 		await ctx.db.patch(pullRequestId, {
 			body,
 			githubUpdatedAt,
 			discussionImportedAt,
+			reviewCommentsImportedAt,
 		});
 
 		await replacePullRequestComments(ctx, pullRequestId, comments);
+		await replacePullRequestReviewComments(ctx, pullRequestId, reviewComments);
 
 		return null;
 	},
@@ -656,6 +786,20 @@ export const listComments = query({
 
 		return await ctx.db
 			.query('pullRequestComments')
+			.withIndex('by_pull_request_and_created_at', (q) => q.eq('pullRequestId', pullRequestId))
+			.order('asc')
+			.collect();
+	},
+});
+
+export const listReviewComments = query({
+	args: { pullRequestId: v.id('pullRequests') },
+	returns: v.array(prReviewCommentDoc),
+	handler: async (ctx, { pullRequestId }) => {
+		await requireSignedIn(ctx);
+
+		return await ctx.db
+			.query('pullRequestReviewComments')
 			.withIndex('by_pull_request_and_created_at', (q) => q.eq('pullRequestId', pullRequestId))
 			.order('asc')
 			.collect();
@@ -720,6 +864,35 @@ async function fetchGitHubIssueComments(
 	return comments;
 }
 
+async function fetchGitHubReviewComments(
+	url: string,
+	baseHeaders: Record<string, string>,
+): Promise<GitHubReviewComment[]> {
+	const comments: GitHubReviewComment[] = [];
+	let nextUrl: string | null = url;
+
+	while (nextUrl) {
+		const response = await fetch(nextUrl, {
+			headers: { ...baseHeaders, Accept: 'application/vnd.github+json' },
+		});
+
+		if (!response.ok) {
+			throw new ConvexError(
+				getGitHubFetchError({
+					resource: 'PR review comments',
+					status: response.status,
+					body: await response.text(),
+				}),
+			);
+		}
+
+		comments.push(...((await response.json()) as GitHubReviewComment[]));
+		nextUrl = getNextPageUrl(response.headers.get('link'));
+	}
+
+	return comments;
+}
+
 function getNextPageUrl(linkHeader: string | null): string | null {
 	if (!linkHeader) return null;
 
@@ -743,6 +916,42 @@ function toStoredComment(comment: GitHubIssueComment) {
 	};
 }
 
+function toStoredReviewComment(comment: GitHubReviewComment): StoredReviewComment {
+	return {
+		githubId: comment.id,
+		pullRequestReviewId: optionalNumber(comment.pull_request_review_id),
+		authorLogin: comment.user?.login ?? 'ghost',
+		authorAvatarUrl: comment.user?.avatar_url ?? '',
+		body: comment.body,
+		htmlUrl: comment.html_url,
+		path: comment.path,
+		diffHunk: comment.diff_hunk,
+		side: optionalReviewCommentSide(comment.side),
+		startSide: optionalReviewCommentSide(comment.start_side),
+		line: optionalNumber(comment.line),
+		originalLine: optionalNumber(comment.original_line),
+		startLine: optionalNumber(comment.start_line),
+		originalStartLine: optionalNumber(comment.original_start_line),
+		position: optionalNumber(comment.position),
+		originalPosition: optionalNumber(comment.original_position),
+		createdAt: new Date(comment.created_at).getTime(),
+		updatedAt: new Date(comment.updated_at).getTime(),
+	};
+}
+
+function optionalNumber(value: number | null | undefined): number | undefined {
+	return typeof value === 'number' ? value : undefined;
+}
+
+function optionalReviewCommentSide(
+	value: PullRequestReviewCommentSide | null | undefined,
+): PullRequestReviewCommentSide | undefined {
+	return value === PullRequestReviewCommentSide.Left ||
+		value === PullRequestReviewCommentSide.Right
+		? value
+		: undefined;
+}
+
 async function replacePullRequestComments(
 	ctx: MutationCtx,
 	pullRequestId: Id<'pullRequests'>,
@@ -757,6 +966,26 @@ async function replacePullRequestComments(
 
 	for (const comment of [...comments].sort((a, b) => a.createdAt - b.createdAt)) {
 		await ctx.db.insert('pullRequestComments', {
+			pullRequestId,
+			...comment,
+		});
+	}
+}
+
+async function replacePullRequestReviewComments(
+	ctx: MutationCtx,
+	pullRequestId: Id<'pullRequests'>,
+	comments: StoredReviewComment[],
+) {
+	const existing = await ctx.db
+		.query('pullRequestReviewComments')
+		.withIndex('by_pull_request_and_created_at', (q) => q.eq('pullRequestId', pullRequestId))
+		.collect();
+
+	await Promise.all(existing.map((comment) => ctx.db.delete(comment._id)));
+
+	for (const comment of [...comments].sort((a, b) => a.createdAt - b.createdAt)) {
+		await ctx.db.insert('pullRequestReviewComments', {
 			pullRequestId,
 			...comment,
 		});

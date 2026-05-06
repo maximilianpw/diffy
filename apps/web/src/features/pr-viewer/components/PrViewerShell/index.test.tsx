@@ -1,3 +1,4 @@
+import { PatchDiff } from "@pierre/diffs/react";
 import {
 	fireEvent,
 	render,
@@ -11,12 +12,43 @@ import { PullRequestState } from "../../model/pull-request.types";
 import { PrViewerShell } from ".";
 import { PrUpdateCheckStatus } from "./pr-update-notice-copy";
 
+vi.mock("@pierre/diffs/react", () => ({
+	PatchDiff: vi.fn(({ patch }: { patch: string }) => (
+		<div data-testid="patch-diff">{patch}</div>
+	)),
+}));
+
 const queryState = vi.hoisted(() => ({
 	comments: [] as PrCommentDoc[],
+	reviewComments: [] as Array<{
+		_id: string;
+		_creationTime: number;
+		pullRequestId: string;
+		githubId: number;
+		authorLogin: string;
+		authorAvatarUrl: string;
+		body: string;
+		htmlUrl: string;
+		path: string;
+		diffHunk: string;
+		side?: "LEFT" | "RIGHT";
+		line?: number;
+		originalLine?: number;
+		startLine?: number;
+		originalStartLine?: number;
+		position?: number;
+		originalPosition?: number;
+		createdAt: number;
+		updatedAt: number;
+	}>,
+	nextQueryIndex: 0,
 }));
 
 vi.mock("convex/react", () => ({
-	useQuery: () => queryState.comments,
+	useQuery: () =>
+		queryState.nextQueryIndex++ % 2 === 0
+			? queryState.comments
+			: queryState.reviewComments,
 }));
 
 const TWO_FILE_PATCH = `diff --git a/packages/router/src/index.ts b/packages/router/src/index.ts
@@ -64,9 +96,7 @@ function fixturePr(overrides: Partial<PrFixture> = {}): PrFixture {
 	};
 }
 
-function fixtureComment(
-	overrides: Partial<PrCommentDoc> = {},
-): PrCommentDoc {
+function fixtureComment(overrides: Partial<PrCommentDoc> = {}): PrCommentDoc {
 	return {
 		_id: "comment_test" as PrCommentDoc["_id"],
 		_creationTime: 0,
@@ -78,6 +108,31 @@ function fixtureComment(
 		htmlUrl: "https://github.com/tanstack/router/pull/123#issuecomment-456",
 		createdAt: new Date("2026-04-13T00:00:00Z").getTime(),
 		updatedAt: new Date("2026-04-13T00:00:00Z").getTime(),
+		...overrides,
+	};
+}
+
+function fixtureReviewComment(
+	overrides: Partial<(typeof queryState.reviewComments)[number]> = {},
+): (typeof queryState.reviewComments)[number] {
+	return {
+		_id: "review_comment_test",
+		_creationTime: 0,
+		pullRequestId: "pr_test",
+		githubId: 789,
+		authorLogin: "lauren",
+		authorAvatarUrl: "https://example.com/reviewer.png",
+		body: "Could we keep this branch covered?",
+		htmlUrl: "https://github.com/tanstack/router/pull/123#discussion_r789",
+		path: "packages/router/src/index.ts",
+		diffHunk: "@@ -1 +1 @@\n-old\n+new",
+		side: "RIGHT",
+		line: 1,
+		originalLine: 1,
+		position: 2,
+		originalPosition: 2,
+		createdAt: new Date("2026-04-12T12:00:00Z").getTime(),
+		updatedAt: new Date("2026-04-12T12:00:00Z").getTime(),
 		...overrides,
 	};
 }
@@ -136,6 +191,9 @@ describe("PrViewerShell", () => {
 		window.location.hash = "";
 		localStorage.clear();
 		queryState.comments = [];
+		queryState.reviewComments = [];
+		queryState.nextQueryIndex = 0;
+		vi.mocked(PatchDiff).mockClear();
 		scrollIntoView.mockReset();
 		Object.defineProperty(Element.prototype, "scrollIntoView", {
 			configurable: true,
@@ -175,9 +233,7 @@ describe("PrViewerShell", () => {
 		expect(
 			screen
 				.getByRole("region", { name: "Pull request preview" })
-				.parentElement?.classList.contains(
-					"lg:grid-cols-[280px_minmax(0,1fr)]",
-				),
+				.parentElement?.classList.contains("sidebar-page-grid"),
 		).toBe(true);
 		expect(
 			screen
@@ -295,6 +351,113 @@ describe("PrViewerShell", () => {
 		expect(within(discussion).getByText("Apr 13, 2026")).toBeTruthy();
 		expect(within(discussion).getByText("rebasing").tagName).toBe("DEL");
 		expect(within(discussion).getByText(/updating the tests/)).toBeTruthy();
+	});
+
+	it("renders inline review comments with changed-file context in the discussion timeline", () => {
+		queryState.comments = [
+			fixtureComment({
+				createdAt: new Date("2026-04-12T13:00:00Z").getTime(),
+			}),
+		];
+		queryState.reviewComments = [fixtureReviewComment()];
+
+		render(<PrViewerShell pr={fixturePr()} />);
+
+		const discussion = screen.getByRole("region", {
+			name: "Pull request discussion",
+		});
+		const reviewComment = within(discussion).getByRole("article", {
+			name: /lauren commented on packages\/router\/src\/index\.ts/,
+		});
+		expect(reviewComment).toBeTruthy();
+		const laterTopLevelComment = within(discussion).getByRole("article", {
+			name: /tkdodo commented/,
+		});
+		expect(
+			reviewComment.compareDocumentPosition(laterTopLevelComment) &
+				Node.DOCUMENT_POSITION_FOLLOWING,
+		).toBeTruthy();
+		expect(
+			within(discussion).getByText("packages/router/src/index.ts:1"),
+		).toBeTruthy();
+		expect(
+			within(discussion).getByText("Could we keep this branch covered?"),
+		).toBeTruthy();
+		expect(within(discussion).getByTestId("patch-diff").textContent).toContain(
+			"+new",
+		);
+		expect(within(discussion).getByText("lauren")).toBeTruthy();
+		expect(PatchDiff).toHaveBeenCalledWith(
+			expect.objectContaining({
+				patch: `diff --git a/packages/router/src/index.ts b/packages/router/src/index.ts
+--- a/packages/router/src/index.ts
++++ b/packages/router/src/index.ts
+@@ -1 +1 @@
+-old
++new
+`,
+				options: expect.objectContaining({
+					diffStyle: "unified",
+					disableFileHeader: true,
+					overflow: "wrap",
+				}),
+			}),
+			undefined,
+		);
+	});
+
+	it("renders GitHub suggested changes in review comments as diffs", () => {
+		queryState.reviewComments = [
+			fixtureReviewComment({
+				body: `Make the lookup miss retriable.
+
+<details>
+<summary>Suggested fix</summary>
+
+\`\`\`suggestion
+const retryable = new Error("missing row");
+retryable.code = "23503";
+throw retryable;
+\`\`\`
+
+</details>`,
+				diffHunk: `@@ -9,5 +9,5 @@
+ if (!rows[0]) {
+   throw new Error(
+     "missing row",
+   );
+ }`,
+				startLine: 9,
+				line: 13,
+			}),
+		];
+
+		render(<PrViewerShell pr={fixturePr()} />);
+
+		const discussion = screen.getByRole("region", {
+			name: "Pull request discussion",
+		});
+		expect(
+			within(discussion).getByText("Make the lookup miss retriable."),
+		).toBeTruthy();
+		expect(within(discussion).getByText("Suggested fix")).toBeTruthy();
+		expect(within(discussion).queryByText("```suggestion")).toBeNull();
+		expect(within(discussion).queryByText("</details>")).toBeNull();
+		expect(within(discussion).getAllByTestId("patch-diff")).toHaveLength(2);
+		expect(PatchDiff).toHaveBeenCalledWith(
+			expect.objectContaining({
+				patch: expect.stringContaining(
+					`+const retryable = new Error("missing row");
++retryable.code = "23503";
++throw retryable;`,
+				),
+				options: expect.objectContaining({
+					diffStyle: "unified",
+					disableFileHeader: true,
+				}),
+			}),
+			undefined,
+		);
 	});
 
 	it("offers Update without a Pause control when a newer PR version is available", () => {
@@ -509,10 +672,7 @@ describe("PrViewerShell", () => {
 
 	it("renders an error state", () => {
 		render(
-			<PrViewerShell
-				pr={null}
-				importError="Could not import pull request."
-			/>,
+			<PrViewerShell pr={null} importError="Could not import pull request." />,
 		);
 
 		expect(screen.getByText("Could not import pull request.")).toBeTruthy();

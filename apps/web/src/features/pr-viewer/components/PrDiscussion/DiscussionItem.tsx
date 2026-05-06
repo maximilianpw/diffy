@@ -1,12 +1,5 @@
-import { useQuery } from "convex/react";
-import { api } from "../../../../convex/_generated/api";
-import type { PrDoc } from "../../../../convex/docTypes";
-import { MarkdownContent } from "./MarkdownContent";
-import "./PrDiscussion.scss";
-
-type PrDiscussionProps = {
-	pr: PrDoc;
-};
+import type { ReactNode } from "react";
+import { MarkdownContent } from "../MarkdownContent";
 
 const dateFormatter = new Intl.DateTimeFormat("en-US", {
 	year: "numeric",
@@ -14,53 +7,27 @@ const dateFormatter = new Intl.DateTimeFormat("en-US", {
 	day: "numeric",
 });
 
-export function PrDiscussion({ pr }: PrDiscussionProps) {
-	const comments =
-		useQuery(api.pullRequests.listComments, { pullRequestId: pr._id }) ?? [];
-	const body = pr.body?.trim();
-	if (!body && comments.length === 0) return null;
-
-	return (
-		<section aria-label="Pull request discussion" className="pr-discussion">
-			{body ? (
-				<DiscussionItem
-					authorLogin={pr.authorLogin}
-					authorAvatarUrl={pr.authorAvatarUrl}
-					eventLabel="opened this pull request"
-					isAuthor={true}
-					body={body}
-				/>
-			) : null}
-			{comments.map((comment) => (
-				<DiscussionItem
-					key={comment._id}
-					authorLogin={comment.authorLogin}
-					authorAvatarUrl={comment.authorAvatarUrl}
-					createdAt={comment.createdAt}
-					eventLabel="commented"
-					isAuthor={comment.authorLogin === pr.authorLogin}
-					body={comment.body}
-				/>
-			))}
-		</section>
-	);
-}
-
-function DiscussionItem({
-	authorLogin,
-	authorAvatarUrl,
-	createdAt,
-	eventLabel,
-	isAuthor,
-	body,
-}: {
+type DiscussionItemProps = {
 	authorLogin: string;
 	authorAvatarUrl: string;
 	createdAt?: number;
 	eventLabel: string;
 	isAuthor: boolean;
 	body: string;
-}) {
+	bodyContent?: ReactNode;
+	reviewContext?: ReactNode;
+};
+
+export function DiscussionItem({
+	authorLogin,
+	authorAvatarUrl,
+	createdAt,
+	eventLabel,
+	isAuthor,
+	body,
+	bodyContent,
+	reviewContext,
+}: DiscussionItemProps) {
 	const createdAtDate =
 		typeof createdAt === "number" ? new Date(createdAt) : null;
 	const formattedDate = createdAtDate
@@ -101,8 +68,9 @@ function DiscussionItem({
 						<span className="pr-discussion-item__badge">Author</span>
 					) : null}
 				</header>
+				{reviewContext}
 				<div className="pr-discussion-item__body">
-					<MarkdownContent>{body}</MarkdownContent>
+					{bodyContent ?? <MarkdownContent>{body}</MarkdownContent>}
 				</div>
 			</div>
 		</article>

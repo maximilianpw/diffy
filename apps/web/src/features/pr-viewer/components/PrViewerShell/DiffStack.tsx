@@ -1,5 +1,4 @@
 import {
-	type WorkerInitializationRenderOptions,
 	WorkerPoolContextProvider,
 	type WorkerPoolOptions,
 } from "@pierre/diffs/react";
@@ -7,11 +6,8 @@ import DiffWorker from "@pierre/diffs/worker/worker.js?worker";
 import type { ReactNode } from "react";
 import { useMemo } from "react";
 import { splitPatchFiles } from "../../model/diff-paths";
+import { DIFF_WORKER_HIGHLIGHTER_OPTIONS } from "../../model/diff-viewer-options";
 import { FileCard } from "../FileCard";
-
-const diffWorkerHighlighterOptions = {
-	theme: "vesper",
-} satisfies WorkerInitializationRenderOptions;
 
 const diffWorkerPoolOptions = {
 	workerFactory: () => new DiffWorker(),
@@ -58,7 +54,7 @@ function DiffWorkerPoolProvider({ children }: { children: ReactNode }) {
 	return (
 		<WorkerPoolContextProvider
 			poolOptions={diffWorkerPoolOptions}
-			highlighterOptions={diffWorkerHighlighterOptions}
+			highlighterOptions={DIFF_WORKER_HIGHLIGHTER_OPTIONS}
 		>
 			{children}
 		</WorkerPoolContextProvider>

@@ -1,12 +1,20 @@
 import { defineSchema, defineTable } from 'convex/server';
 import { v } from 'convex/values';
 import { authTables } from '@convex-dev/auth/server';
-import { PullRequestState } from '@diffy/shared';
+import {
+	PullRequestReviewCommentSide,
+	PullRequestState,
+} from '@diffy/shared';
 
 const pullRequestStateValidator = v.union(
 	v.literal(PullRequestState.Open),
 	v.literal(PullRequestState.Closed),
 	v.literal(PullRequestState.Merged),
+);
+
+const pullRequestReviewCommentSideValidator = v.union(
+	v.literal(PullRequestReviewCommentSide.Left),
+	v.literal(PullRequestReviewCommentSide.Right),
 );
 
 export default defineSchema({
@@ -49,6 +57,7 @@ export default defineSchema({
 		latestVersionId: v.optional(v.id('pullRequestVersions')),
 		latestVersionNumber: v.optional(v.number()),
 		discussionImportedAt: v.optional(v.number()),
+		reviewCommentsImportedAt: v.optional(v.number()),
 	})
 		.index('by_owner_and_repo_and_number', ['owner', 'repo', 'number'])
 		.index('by_last_viewed', ['lastViewedAt']),
@@ -78,6 +87,29 @@ export default defineSchema({
 		authorAvatarUrl: v.string(),
 		body: v.string(),
 		htmlUrl: v.string(),
+		createdAt: v.number(),
+		updatedAt: v.number(),
+	})
+		.index('by_pull_request_and_created_at', ['pullRequestId', 'createdAt'])
+		.index('by_pull_request_and_github_id', ['pullRequestId', 'githubId']),
+	pullRequestReviewComments: defineTable({
+		pullRequestId: v.id('pullRequests'),
+		githubId: v.number(),
+		pullRequestReviewId: v.optional(v.number()),
+		authorLogin: v.string(),
+		authorAvatarUrl: v.string(),
+		body: v.string(),
+		htmlUrl: v.string(),
+		path: v.string(),
+		diffHunk: v.string(),
+		side: v.optional(pullRequestReviewCommentSideValidator),
+		startSide: v.optional(pullRequestReviewCommentSideValidator),
+		line: v.optional(v.number()),
+		originalLine: v.optional(v.number()),
+		startLine: v.optional(v.number()),
+		originalStartLine: v.optional(v.number()),
+		position: v.optional(v.number()),
+		originalPosition: v.optional(v.number()),
 		createdAt: v.number(),
 		updatedAt: v.number(),
 	})

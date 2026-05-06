@@ -3,3 +3,8 @@ export enum PullRequestState {
 	Closed = "closed",
 	Merged = "merged",
 }
+
+export enum PullRequestReviewCommentSide {
+	Left = "LEFT",
+	Right = "RIGHT",
+}
