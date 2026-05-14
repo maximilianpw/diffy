@@ -43,11 +43,7 @@ function UpdateActions({
 }) {
 	if (isAvailable) {
 		return (
-			<Button
-				type="button"
-				size="sm"
-				onClick={updateCheck.onApplyUpdate}
-			>
+			<Button type="button" size="sm" onClick={updateCheck.onApplyUpdate}>
 				<RefreshCw data-icon="inline-start" />
 				Update
 			</Button>
@@ -61,7 +57,11 @@ function UpdateActions({
 			variant="outline"
 			onClick={updateCheck.onToggleAutoCheck}
 		>
-			{isPaused ? <Play data-icon="inline-start" /> : <Pause data-icon="inline-start" />}
+			{isPaused ? (
+				<Play data-icon="inline-start" />
+			) : (
+				<Pause data-icon="inline-start" />
+			)}
 			{isPaused ? "Resume checks" : "Pause checks"}
 		</Button>
 	);

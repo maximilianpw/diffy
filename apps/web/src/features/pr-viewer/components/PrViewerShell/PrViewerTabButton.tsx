@@ -1,5 +1,5 @@
 import { cn } from "#/lib/utils";
-import { PrViewerTab, prViewerTabs } from "./pr-viewer-tabs";
+import { type PrViewerTab, prViewerTabs } from "./pr-viewer-tabs";
 
 export function PrViewerTabButton({
 	tab,

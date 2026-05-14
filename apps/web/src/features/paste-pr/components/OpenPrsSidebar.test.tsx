@@ -59,11 +59,7 @@ describe("OpenPrsSidebar", () => {
 
 	it("shows an empty state when there are no open PRs", () => {
 		render(
-			<OpenPrsSidebar
-				isAuthenticated={true}
-				openPrs={[]}
-				onSelect={vi.fn()}
-			/>,
+			<OpenPrsSidebar isAuthenticated={true} openPrs={[]} onSelect={vi.fn()} />,
 		);
 
 		expect(screen.getByText(/No open pull requests/i)).toBeTruthy();
@@ -71,8 +67,18 @@ describe("OpenPrsSidebar", () => {
 
 	it("renders the open-PR header and count when PRs are present", () => {
 		const openPrs = [
-			fixturePr({ owner: "tanstack", repo: "router", number: 1, title: "Add API" }),
-			fixturePr({ owner: "tanstack", repo: "query", number: 2, title: "Fix cache" }),
+			fixturePr({
+				owner: "tanstack",
+				repo: "router",
+				number: 1,
+				title: "Add API",
+			}),
+			fixturePr({
+				owner: "tanstack",
+				repo: "query",
+				number: 2,
+				title: "Fix cache",
+			}),
 		];
 
 		render(
@@ -89,7 +95,12 @@ describe("OpenPrsSidebar", () => {
 
 	it("calls onSelect with the PR entry when its row is clicked", async () => {
 		const onSelect = vi.fn();
-		const pr = fixturePr({ owner: "tanstack", repo: "router", number: 1, title: "Add API" });
+		const pr = fixturePr({
+			owner: "tanstack",
+			repo: "router",
+			number: 1,
+			title: "Add API",
+		});
 
 		render(
 			<OpenPrsSidebar

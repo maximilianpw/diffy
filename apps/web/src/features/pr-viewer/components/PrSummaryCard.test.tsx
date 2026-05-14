@@ -4,9 +4,7 @@ import type { PrDoc } from "../../../../convex/docTypes";
 import { PullRequestState } from "../model/pull-request.types";
 import { PrSummaryCard } from "./PrSummaryCard";
 
-function fixturePr(
-	overrides: Partial<PrDoc> = {},
-): PrDoc {
+function fixturePr(overrides: Partial<PrDoc> = {}): PrDoc {
 	return {
 		_id: "pr_test" as PrDoc["_id"],
 		_creationTime: 0,

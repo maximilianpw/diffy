@@ -1,6 +1,6 @@
 import { createRouter as createTanStackRouter } from "@tanstack/react-router";
-import { routeTree } from "./routeTree.gen";
 import { queryClient } from "./integrations/convex/provider";
+import { routeTree } from "./routeTree.gen";
 
 export function getRouter() {
 	const router = createTanStackRouter({
