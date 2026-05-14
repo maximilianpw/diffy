@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import type { PrDoc } from "../../../../../convex/docTypes";
 import type { DiffLocationTarget } from "../../model/diff-location";
 import { PrViewerShellStatus } from ".";
@@ -16,6 +17,7 @@ type PrViewerCodePanelProps = {
 	onToggleViewed: (path: string) => void;
 	onDiffRendered?: (path: string) => void;
 	error?: string | null;
+	errorAction?: ReactNode;
 };
 
 export function PrViewerCodePanel({
@@ -28,6 +30,7 @@ export function PrViewerCodePanel({
 	onToggleViewed,
 	onDiffRendered,
 	error,
+	errorAction,
 }: PrViewerCodePanelProps) {
 	if (
 		status === PrViewerShellStatus.Importing ||
@@ -35,7 +38,11 @@ export function PrViewerCodePanel({
 	) {
 		return (
 			<PrViewerTabPanel tab={PrViewerTab.Code}>
-				<PrViewerStatusCard status={status} error={error} />
+				<PrViewerStatusCard
+					status={status}
+					error={error}
+					action={errorAction}
+				/>
 			</PrViewerTabPanel>
 		);
 	}

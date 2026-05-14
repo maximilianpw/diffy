@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { type ReactNode, useEffect, useRef, useState } from "react";
 import type { PrDoc } from "../../../../../convex/docTypes";
 import { usePrDiff } from "../../hooks/use-pr-diff";
 import { useViewedFiles } from "../../hooks/use-viewed-files";
@@ -20,6 +20,7 @@ export type { PrUpdateCheck } from "./PrUpdateNotice";
 type PrViewerShellProps = {
 	pr: (PrDoc & { diffUrl: string | null }) | null;
 	importError?: string | null;
+	importErrorAction?: ReactNode;
 	updateCheck?: PrUpdateCheck;
 };
 
@@ -33,6 +34,7 @@ export enum PrViewerShellStatus {
 export function PrViewerShell({
 	pr,
 	importError,
+	importErrorAction,
 	updateCheck,
 }: PrViewerShellProps) {
 	const {
@@ -174,6 +176,7 @@ export function PrViewerShell({
 						pr={pr}
 						status={status}
 						error={error}
+						errorAction={error ? importErrorAction : undefined}
 						updateCheck={updateCheck}
 						onJumpToDiffLocation={handleDiffLocationSelect}
 					/>
@@ -188,6 +191,7 @@ export function PrViewerShell({
 						selectedDiffLocation={selectedDiffLocation}
 						onToggleViewed={toggle}
 						onDiffRendered={handleDiffRendered}
+						errorAction={error ? importErrorAction : undefined}
 					/>
 				)}
 			</section>

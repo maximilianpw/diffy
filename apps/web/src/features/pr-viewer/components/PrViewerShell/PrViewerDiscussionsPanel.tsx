@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import type { PrDoc } from "../../../../../convex/docTypes";
 import type { DiffLocationTarget } from "../../model/diff-location";
 import { PrDiscussion } from "../PrDiscussion";
@@ -12,12 +13,14 @@ export function PrViewerDiscussionsPanel({
 	pr,
 	status,
 	error,
+	errorAction,
 	updateCheck,
 	onJumpToDiffLocation,
 }: {
 	pr: PrDoc | null;
 	status: PrViewerShellStatus;
 	error?: string | null;
+	errorAction?: ReactNode;
 	updateCheck?: PrUpdateCheck;
 	onJumpToDiffLocation?: (target: DiffLocationTarget) => void;
 }) {
@@ -28,7 +31,7 @@ export function PrViewerDiscussionsPanel({
 			{pr ? (
 				<PrDiscussion pr={pr} onJumpToDiffLocation={onJumpToDiffLocation} />
 			) : null}
-			<PrViewerStatusCard status={status} error={error} />
+			<PrViewerStatusCard status={status} error={error} action={errorAction} />
 		</PrViewerTabPanel>
 	);
 }

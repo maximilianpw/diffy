@@ -1,12 +1,15 @@
+import type { ReactNode } from "react";
 import { Card } from "#/components/ui/card";
 import { PrViewerShellStatus } from ".";
 
 export function PrViewerStatusCard({
 	status,
 	error,
+	action,
 }: {
 	status: PrViewerShellStatus;
 	error?: string | null;
+	action?: ReactNode;
 }) {
 	if (status === PrViewerShellStatus.Importing) {
 		return (
@@ -20,6 +23,7 @@ export function PrViewerStatusCard({
 		return (
 			<Card className="p-4 text-destructive">
 				{error ?? "Could not load pull request."}
+				{action}
 			</Card>
 		);
 	}

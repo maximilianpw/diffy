@@ -2,7 +2,10 @@ import { useEffect, useState } from "react";
 import type { Id } from "../../../../convex/_generated/dataModel";
 import type { PrDoc } from "../../../../convex/docTypes";
 import { shouldBackfillDiscussion } from "../model/discussion-backfill";
-import { getImportErrorMessage } from "../model/import-error-message";
+import {
+	getImportErrorDetails,
+	type ImportErrorDetails,
+} from "../model/import-error-message";
 
 type PrSnapshot =
 	| (PrDoc & {
@@ -40,17 +43,23 @@ export function useEnsurePrImported({
 	number,
 	importPr,
 	importDiscussion,
-}: Args): string | null {
-	const [importError, setImportError] = useState<string | null>(null);
+}: Args): ImportErrorDetails | null {
+	const [importError, setImportError] = useState<ImportErrorDetails | null>(
+		null,
+	);
 	const [importStarted, setImportStarted] = useState(false);
 	const [discussionImportStarted, setDiscussionImportStarted] = useState(false);
+
+	useEffect(() => {
+		if (pr) setImportError(null);
+	}, [pr]);
 
 	useEffect(() => {
 		if (pr !== null || importStarted) return;
 
 		setImportStarted(true);
 		void importPr({ owner, repo, number }).catch((cause) => {
-			setImportError(getImportErrorMessage(cause));
+			setImportError(getImportErrorDetails(cause));
 		});
 	}, [importPr, importStarted, owner, pr, number, repo]);
 
@@ -64,7 +73,7 @@ export function useEnsurePrImported({
 			repo,
 			number,
 		}).catch((cause) => {
-			setImportError(getImportErrorMessage(cause));
+			setImportError(getImportErrorDetails(cause));
 		});
 	}, [discussionImportStarted, importDiscussion, owner, pr, number, repo]);
 

@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useAction, useQuery } from "convex/react";
 import { useCallback, useState } from "react";
 import { TopBar } from "#/components/top-bar";
+import { GitHubCredentialRecovery } from "#/features/pr-viewer/components/GitHubCredentialRecovery";
 import type { PrUpdateCheck } from "#/features/pr-viewer/components/PrViewerShell";
 import { api } from "../../convex/_generated/api";
 import { PrViewerShell } from "../features/pr-viewer/components/PrViewerShell";
@@ -94,6 +95,9 @@ function PrRouteForPullRequest({
 	}, [importPr, owner, polling, number, repo]);
 
 	const onApplyUpdate = useCallback(() => void applyUpdate(), [applyUpdate]);
+	const importErrorAction = importError?.canSaveRepositoryCredential ? (
+		<GitHubCredentialRecovery owner={owner} repo={repo} onSaved={applyUpdate} />
+	) : undefined;
 
 	const updateCheck: PrUpdateCheck | undefined =
 		pr?.state === PullRequestState.Open
@@ -112,7 +116,8 @@ function PrRouteForPullRequest({
 			<TopBar pr={pr ?? { owner, repo, number }} />
 			<PrViewerShell
 				pr={pr ?? null}
-				importError={importError ?? updateError}
+				importError={importError?.message ?? updateError}
+				importErrorAction={importErrorAction}
 				updateCheck={updateCheck}
 			/>
 		</>
