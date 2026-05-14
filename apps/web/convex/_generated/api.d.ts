@@ -11,6 +11,9 @@
 import type * as auth from "../auth.js";
 import type * as docTypes from "../docTypes.js";
 import type * as githubApiErrors from "../githubApiErrors.js";
+import type * as githubCredentialCrypto from "../githubCredentialCrypto.js";
+import type * as githubCredentials from "../githubCredentials.js";
+import type * as githubOAuthScope from "../githubOAuthScope.js";
 import type * as http from "../http.js";
 import type * as pullRequests from "../pullRequests.js";
 import type * as reviewState from "../reviewState.js";
@@ -25,6 +28,9 @@ declare const fullApi: ApiFromModules<{
   auth: typeof auth;
   docTypes: typeof docTypes;
   githubApiErrors: typeof githubApiErrors;
+  githubCredentialCrypto: typeof githubCredentialCrypto;
+  githubCredentials: typeof githubCredentials;
+  githubOAuthScope: typeof githubOAuthScope;
   http: typeof http;
   pullRequests: typeof pullRequests;
   reviewState: typeof reviewState;

@@ -16,6 +16,8 @@ import {
 	type MutationCtx,
 	type QueryCtx,
 } from './_generated/server';
+import { decryptGitHubToken } from './githubCredentialCrypto';
+import { requireEncryptionKey } from './githubCredentials';
 import { getGitHubFetchError } from './githubApiErrors';
 
 const GITHUB_API = 'https://api.github.com';
@@ -215,6 +217,113 @@ function getPullRequestState(meta: Pick<GitHubPrMeta, 'merged_at' | 'state'>): P
 const MISSING_TOKEN_MESSAGE =
 	'GitHub access token is missing. Sign out and sign in with GitHub again.';
 
+async function resolveGitHubFetchCredential(
+	ctx: ActionCtx,
+	{
+		userId,
+		owner,
+		repo,
+	}: { userId: Id<'users'>; owner: string; repo: string },
+): Promise<GitHubFetchCredential> {
+	const credential = await ctx.runQuery(
+		internal.githubCredentials.getRepositoryCredentialSecret,
+		{ userId, owner, repo },
+	);
+
+	if (credential != null) {
+		try {
+			return {
+				source: 'stored_pat',
+				credentialId: credential._id,
+				token: await decryptGitHubToken(credential, requireEncryptionKey()),
+			};
+		} catch {
+			await ctx.runMutation(
+				internal.githubCredentials.markRepositoryCredentialFailure,
+				{
+					id: credential._id,
+					lastFailure:
+						'Stored GitHub token could not be decrypted. Replace it and retry.',
+					now: Date.now(),
+				},
+			);
+			throw new ConvexError({
+				kind: 'github_stored_pat_failed',
+				owner,
+				repo,
+				message: `Stored GitHub token for ${owner}/${repo} could not be decrypted. Replace it and retry.`,
+			});
+		}
+	}
+
+	const token: string | null = await ctx.runQuery(
+		internal.pullRequests.getGitHubAccessToken,
+		{ userId },
+	);
+	if (!token) {
+		throw new ConvexError(MISSING_TOKEN_MESSAGE);
+	}
+
+	return { source: 'oauth', token };
+}
+
+async function markStoredCredentialFailure(
+	ctx: ActionCtx,
+	credential: GitHubFetchCredential,
+	cause: unknown,
+	{
+		owner,
+		repo,
+	}: {
+		owner: string;
+		repo: string;
+	},
+) {
+	if (credential.source !== 'stored_pat' || !isCredentialAuthFailure(cause)) {
+		return;
+	}
+
+	await ctx.runMutation(internal.githubCredentials.markRepositoryCredentialFailure, {
+		id: credential.credentialId,
+		lastFailure: getStoredCredentialFailureMessage(cause),
+		now: Date.now(),
+	});
+
+	throw new ConvexError({
+		kind: 'github_stored_pat_failed',
+		owner,
+		repo,
+		message: `Stored GitHub token for ${owner}/${repo} could not access this pull request. Replace the token and retry.`,
+	});
+}
+
+function isCredentialAuthFailure(cause: unknown): boolean {
+	if (!(cause instanceof ConvexError)) return false;
+	if (cause.data == null || typeof cause.data !== 'object') return false;
+	if (!('kind' in cause.data)) return false;
+
+	if (cause.data.kind === 'github_org_oauth_app_restricted') return true;
+	if (cause.data.kind !== 'github_fetch_failed') return false;
+	if (!('status' in cause.data) || typeof cause.data.status !== 'number') {
+		return false;
+	}
+	return cause.data.status === 401 || cause.data.status === 403;
+}
+
+function getStoredCredentialFailureMessage(cause: unknown): string {
+	if (
+		cause instanceof ConvexError &&
+		cause.data != null &&
+		typeof cause.data === 'object' &&
+		'message' in cause.data &&
+		typeof cause.data.message === 'string'
+	) {
+		return cause.data.message;
+	}
+
+	return 'Stored GitHub token could not access this pull request.';
+}
+
 const commentValidator = v.object({
 	githubId: v.number(),
 	authorLogin: v.string(),
@@ -284,6 +393,17 @@ type ExistingVersion = {
 	diffByteSize: number;
 };
 
+type GitHubFetchCredential =
+	| {
+			source: 'stored_pat';
+			credentialId: Id<'githubCredentials'>;
+			token: string;
+	  }
+	| {
+			source: 'oauth';
+			token: string;
+	  };
+
 export const importPr = action({
 	args: {
 		owner: v.string(),
@@ -294,15 +414,14 @@ export const importPr = action({
 	handler: async (ctx, { owner, repo, number }): Promise<Id<'pullRequests'>> => {
 		const userId = await requireSignedIn(ctx);
 
-		const token: string | null = await ctx.runQuery(internal.pullRequests.getGitHubAccessToken, {
+		const credential = await resolveGitHubFetchCredential(ctx, {
 			userId,
+			owner,
+			repo,
 		});
-		if (!token) {
-			throw new ConvexError(MISSING_TOKEN_MESSAGE);
-		}
 
 		const baseHeaders: Record<string, string> = {
-			Authorization: `Bearer ${token}`,
+			Authorization: `Bearer ${credential.token}`,
 			'X-GitHub-Api-Version': '2022-11-28',
 			'User-Agent': 'diffy',
 		};
@@ -310,6 +429,7 @@ export const importPr = action({
 		const commentsUrl = `${GITHUB_API}/repos/${owner}/${repo}/issues/${number}/comments?per_page=100`;
 		const reviewCommentsUrl = `${GITHUB_API}/repos/${owner}/${repo}/pulls/${number}/comments?per_page=100`;
 
+		try {
 		const [metaRes, comments, reviewComments]: [
 			Response,
 			GitHubIssueComment[],
@@ -386,6 +506,10 @@ export const importPr = action({
 			comments: comments.map(toStoredComment),
 			reviewComments: reviewComments.map(toStoredReviewComment),
 		});
+		} catch (cause) {
+			await markStoredCredentialFailure(ctx, credential, cause, { owner, repo });
+			throw cause;
+		}
 	},
 });
 
@@ -399,12 +523,11 @@ export const checkForUpdates = action({
 	handler: async (ctx, { owner, repo, number }): Promise<UpdateCheckResult> => {
 		const userId = await requireSignedIn(ctx);
 
-		const token: string | null = await ctx.runQuery(internal.pullRequests.getGitHubAccessToken, {
+		const credential = await resolveGitHubFetchCredential(ctx, {
 			userId,
+			owner,
+			repo,
 		});
-		if (!token) {
-			throw new ConvexError(MISSING_TOKEN_MESSAGE);
-		}
 
 		const local: UpdateSnapshot | null = await ctx.runQuery(internal.pullRequests.getUpdateSnapshot, {
 			owner,
@@ -412,9 +535,10 @@ export const checkForUpdates = action({
 			number,
 		});
 
+		try {
 		const response = await fetch(`${GITHUB_API}/repos/${owner}/${repo}/pulls/${number}`, {
 			headers: {
-				Authorization: `Bearer ${token}`,
+				Authorization: `Bearer ${credential.token}`,
 				Accept: 'application/vnd.github+json',
 				'X-GitHub-Api-Version': '2022-11-28',
 				'User-Agent': 'diffy',
@@ -448,6 +572,10 @@ export const checkForUpdates = action({
 			remoteBaseSha: meta.base.sha,
 			remoteHeadSha: meta.head.sha,
 		};
+		} catch (cause) {
+			await markStoredCredentialFailure(ctx, credential, cause, { owner, repo });
+			throw cause;
+		}
 	},
 });
 
@@ -462,15 +590,14 @@ export const importDiscussion = action({
 	handler: async (ctx, { pullRequestId, owner, repo, number }) => {
 		const userId = await requireSignedIn(ctx);
 
-		const token: string | null = await ctx.runQuery(internal.pullRequests.getGitHubAccessToken, {
+		const credential = await resolveGitHubFetchCredential(ctx, {
 			userId,
+			owner,
+			repo,
 		});
-		if (!token) {
-			throw new ConvexError(MISSING_TOKEN_MESSAGE);
-		}
 
 		const baseHeaders: Record<string, string> = {
-			Authorization: `Bearer ${token}`,
+			Authorization: `Bearer ${credential.token}`,
 			'X-GitHub-Api-Version': '2022-11-28',
 			'User-Agent': 'diffy',
 		};
@@ -478,6 +605,7 @@ export const importDiscussion = action({
 		const commentsUrl = `${GITHUB_API}/repos/${owner}/${repo}/issues/${number}/comments?per_page=100`;
 		const reviewCommentsUrl = `${GITHUB_API}/repos/${owner}/${repo}/pulls/${number}/comments?per_page=100`;
 
+		try {
 		const [metaRes, comments, reviewComments]: [
 			Response,
 			GitHubIssueComment[],
@@ -512,6 +640,10 @@ export const importDiscussion = action({
 		});
 
 		return null;
+		} catch (cause) {
+			await markStoredCredentialFailure(ctx, credential, cause, { owner, repo });
+			throw cause;
+		}
 	},
 });
 

@@ -2,6 +2,8 @@ import { defineSchema, defineTable } from 'convex/server';
 import { v } from 'convex/values';
 import { authTables } from '@convex-dev/auth/server';
 import {
+	GitHubCredentialHealth,
+	GitHubCredentialScope,
 	PullRequestReviewCommentSide,
 	PullRequestState,
 } from '@diffy/shared';
@@ -15,6 +17,15 @@ const pullRequestStateValidator = v.union(
 const pullRequestReviewCommentSideValidator = v.union(
 	v.literal(PullRequestReviewCommentSide.Left),
 	v.literal(PullRequestReviewCommentSide.Right),
+);
+
+const githubCredentialHealthValidator = v.union(
+	v.literal(GitHubCredentialHealth.Healthy),
+	v.literal(GitHubCredentialHealth.Unhealthy),
+);
+
+const githubCredentialScopeValidator = v.union(
+	v.literal(GitHubCredentialScope.Repository),
 );
 
 export default defineSchema({
@@ -127,4 +138,21 @@ export default defineSchema({
 		'versionNumber',
 		'path',
 	]),
+	githubCredentials: defineTable({
+		userId: v.id('users'),
+		scope: githubCredentialScopeValidator,
+		owner: v.string(),
+		repo: v.string(),
+		encryptedToken: v.string(),
+		iv: v.string(),
+		tokenLastFour: v.string(),
+		scopeLabel: v.string(),
+		health: githubCredentialHealthValidator,
+		createdAt: v.number(),
+		updatedAt: v.number(),
+		lastVerifiedAt: v.optional(v.number()),
+		lastFailure: v.optional(v.string()),
+	})
+		.index('by_user_owner_repo', ['userId', 'owner', 'repo'])
+		.index('by_user_updated_at', ['userId', 'updatedAt']),
 });

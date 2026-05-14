@@ -4,3 +4,4 @@ export type PrDoc = Doc<"pullRequests">;
 export type PrCommentDoc = Doc<"pullRequestComments">;
 export type PrReviewCommentDoc = Doc<"pullRequestReviewComments">;
 export type ReviewStateViewedFileDoc = Doc<"reviewStateViewedFiles">;
+export type GitHubCredentialDoc = Doc<"githubCredentials">;
