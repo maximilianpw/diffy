@@ -24,9 +24,6 @@ jobs:
       - name: Biome check
         run: bun --filter '*' check
 
-      - name: Typecheck extension
-        run: bun --filter wxt-react-starter compile
-
       - name: Test
         run: bun --filter '*' test
 

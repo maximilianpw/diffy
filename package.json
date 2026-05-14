@@ -8,7 +8,9 @@
     "build": "bun --filter '*' build",
     "check": "bun --filter '*' check",
     "test": "bun --filter '*' test",
-    "deploy": "bun --filter '@diffy/web' deploy"
+    "deploy": "bun --filter '@diffy/web' deploy",
+    "zip:extension": "bun --filter '@diffy/extension' zip",
+    "zip:extension:firefox": "bun --filter '@diffy/extension' zip:firefox"
   },
   "devDependencies": {
     "@biomejs/biome": "2.4.5",

@@ -27,6 +27,33 @@ For the extension:
 bun --filter @diffy/extension dev
 ```
 
+For a production extension build, point the injected GitHub tab at the deployed
+web app:
+
+```sh
+VITE_DIFFY_WEB_URL=https://diffy.example.com bun --filter @diffy/extension build
+```
+
+## Verify
+
+```sh
+bun run check
+bun run test
+bun run build
+```
+
+## Ship
+
+```sh
+bun run deploy                  # Cloudflare Workers web app
+bun run zip:extension           # Chrome MV3 zip
+bun run zip:extension:firefox   # Firefox zip
+```
+
+Set the production Convex/Auth values documented in `.env.example` before
+deploying the web app. Set `VITE_DIFFY_WEB_URL` when packaging the extension so
+the GitHub tab points at the deployed web app instead of local development.
+
 ## Tooling
 
 - Bun workspaces, Biome (format + lint), TypeScript.

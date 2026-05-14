@@ -11,3 +11,6 @@ For a production build, set `VITE_DIFFY_WEB_URL`:
 ```sh
 VITE_DIFFY_WEB_URL=https://diffy.example.com bun run build
 ```
+
+The extension does not collect or transmit personal data. Firefox builds declare
+that through `browser_specific_settings.gecko.data_collection_permissions`.

@@ -9,5 +9,12 @@ export default defineConfig({
     action: {
       default_title: 'Diffy',
     },
+    browser_specific_settings: {
+      gecko: {
+        data_collection_permissions: {
+          required: ['none'],
+        },
+      },
+    },
   },
 });
