@@ -11,43 +11,43 @@ A self-hosted GitHub PR diff viewer. Open from a browser-extension tab next to "
 ## Develop
 
 ```sh
-bun install
-bun dev          # starts the web app
+pnpm install
+pnpm dev          # starts the web app
 ```
 
 In a second shell, from `apps/web/`:
 
 ```sh
-bunx convex dev  # provisions the Convex deployment, populates VITE_CONVEX_URL
+pnpm exec convex dev  # provisions the Convex deployment, populates VITE_CONVEX_URL
 ```
 
 For the extension:
 
 ```sh
-bun --filter @diffy/extension dev
+pnpm --filter @diffy/extension dev
 ```
 
 For a production extension build, point the injected GitHub tab at the deployed
 web app:
 
 ```sh
-VITE_DIFFY_WEB_URL=https://diffy.example.com bun --filter @diffy/extension build
+VITE_DIFFY_WEB_URL=https://diffy.example.com pnpm --filter @diffy/extension build
 ```
 
 ## Verify
 
 ```sh
-bun run check
-bun run test
-bun run build
+pnpm run check
+pnpm run test
+pnpm run build
 ```
 
 ## Ship
 
 ```sh
-bun run deploy                  # Cloudflare Workers web app
-bun run zip:extension           # Chrome MV3 zip
-bun run zip:extension:firefox   # Firefox zip
+pnpm run deploy                  # Cloudflare Workers web app
+pnpm run zip:extension           # Chrome MV3 zip
+pnpm run zip:extension:firefox   # Firefox zip
 ```
 
 Set the production Convex/Auth values documented in `.env.example` before
@@ -59,7 +59,7 @@ unreadable.
 
 ## Tooling
 
-- Bun workspaces, Biome (format + lint), TypeScript.
+- pnpm workspaces, Biome (format + lint), TypeScript.
 - Tool versions pinned in `.tool-versions` (mise/asdf).
 - MCP servers for Convex / Playwright / GitHub configured in `.mcp.json`.
 

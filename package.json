@@ -2,22 +2,19 @@
   "name": "diffy",
   "private": true,
   "type": "module",
-  "workspaces": ["apps/*", "packages/*"],
+  "packageManager": "pnpm@10.28.0",
   "scripts": {
-    "dev": "concurrently -n web,convex -c blue,green \"bun --filter '@diffy/web' dev\" \"cd apps/web && bunx convex dev\"",
-    "build": "bun --filter '*' build",
-    "check": "bun --filter '*' check",
-    "test": "bun --filter '*' test",
-    "deploy": "bun --filter '@diffy/web' deploy",
-    "zip:extension": "bun --filter '@diffy/extension' zip",
-    "zip:extension:firefox": "bun --filter '@diffy/extension' zip:firefox"
+    "dev": "concurrently -n web,convex -c blue,green \"pnpm --filter '@diffy/web' dev\" \"pnpm --dir apps/web exec convex dev\"",
+    "build": "pnpm -r --if-present build",
+    "check": "pnpm -r --if-present check",
+    "test": "pnpm -r --if-present test",
+    "deploy": "pnpm --filter '@diffy/web' deploy",
+    "zip:extension": "pnpm --filter '@diffy/extension' zip",
+    "zip:extension:firefox": "pnpm --filter '@diffy/extension' zip:firefox"
   },
   "devDependencies": {
     "@biomejs/biome": "2.4.5",
     "concurrently": "^9.2.1",
     "typescript": "^6.0.2"
-  },
-  "patchedDependencies": {
-    "@pierre/trees@1.0.0-beta.3": "patches/@pierre%2Ftrees@1.0.0-beta.3.patch"
   }
 }

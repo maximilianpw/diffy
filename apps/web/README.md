@@ -7,7 +7,7 @@ TanStack Start frontend and Convex backend for Diffy.
 From the repository root:
 
 ```sh
-bun dev
+pnpm dev
 ```
 
 This starts the Vite app and `convex dev` together. The web app listens on
@@ -16,15 +16,15 @@ This starts the Vite app and `convex dev` together. The web app listens on
 ## Checks
 
 ```sh
-bun --filter @diffy/web check
-bun --filter @diffy/web test
-bun --filter @diffy/web build
+pnpm --filter @diffy/web check
+pnpm --filter @diffy/web test
+pnpm --filter @diffy/web build
 ```
 
 ## Deploy
 
 ```sh
-bun --filter @diffy/web deploy
+pnpm --filter @diffy/web deploy
 ```
 
 The Cloudflare Worker is configured in `wrangler.jsonc`. Convex/Auth environment

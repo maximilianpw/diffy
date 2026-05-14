@@ -5,4 +5,4 @@ windows:
   - neovim: nvim
   - codex: codex --yolo
   - terminal: jj st
-  - dev: bun run dev
+  - dev: pnpm run dev

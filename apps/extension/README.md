@@ -9,7 +9,7 @@ next to GitHub's pull request tabs. By default the tab points at
 For a production build, set `VITE_DIFFY_WEB_URL`:
 
 ```sh
-VITE_DIFFY_WEB_URL=https://diffy.example.com bun run build
+VITE_DIFFY_WEB_URL=https://diffy.example.com pnpm run build
 ```
 
 The extension does not collect or transmit personal data. Firefox builds declare

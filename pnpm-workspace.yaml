@@ -1,0 +1,12 @@
+packages:
+  - "apps/*"
+  - "packages/*"
+
+minimumReleaseAge: 10080
+
+onlyBuiltDependencies:
+  - "esbuild"
+  - "lightningcss"
+
+patchedDependencies:
+  "@pierre/trees@1.0.0-beta.3": "patches/@pierre%2Ftrees@1.0.0-beta.3.patch"
