@@ -52,7 +52,10 @@ bun run zip:extension:firefox   # Firefox zip
 
 Set the production Convex/Auth values documented in `.env.example` before
 deploying the web app. Set `VITE_DIFFY_WEB_URL` when packaging the extension so
-the GitHub tab points at the deployed web app instead of local development.
+the GitHub tab points at the deployed web app instead of local development. If
+stored repository tokens are enabled, set `GITHUB_PAT_ENCRYPTION_KEY` in Convex
+to a stable 32-byte secret; changing it makes existing encrypted tokens
+unreadable.
 
 ## Tooling
 

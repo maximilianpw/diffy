@@ -28,4 +28,6 @@ bun --filter @diffy/web deploy
 ```
 
 The Cloudflare Worker is configured in `wrangler.jsonc`. Convex/Auth environment
-variables are documented in the repository root `.env.example`.
+variables are documented in the repository root `.env.example`. The stored
+GitHub token flow requires `GITHUB_PAT_ENCRYPTION_KEY` in the Convex environment
+before users can save repository-specific PATs.
