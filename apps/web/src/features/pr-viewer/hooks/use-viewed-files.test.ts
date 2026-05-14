@@ -1,14 +1,35 @@
 import { act, renderHook } from "@testing-library/react";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import type { Id } from "../../../../convex/_generated/dataModel";
 import { useViewedFiles } from "./use-viewed-files";
 
 const PR = { owner: "tanstack", repo: "router", number: 123 };
+const REMOTE_PR = {
+	...PR,
+	_id: "pr_test" as Id<"pullRequests">,
+	latestVersionNumber: 1,
+};
+
+const convexState = vi.hoisted(() => ({
+	viewedPaths: undefined as string[] | undefined,
+	setViewedPaths: vi.fn(),
+}));
+
+vi.mock("convex/react", () => ({
+	useMutation: () => convexState.setViewedPaths,
+	useQuery: () => convexState.viewedPaths,
+}));
 
 afterEach(() => {
 	localStorage.clear();
 });
 
 describe("useViewedFiles", () => {
+	beforeEach(() => {
+		convexState.viewedPaths = undefined;
+		convexState.setViewedPaths.mockReset();
+	});
+
 	it("reports unviewed by default and toggles into the viewed set", () => {
 		const { result } = renderHook(() => useViewedFiles(PR));
 
@@ -75,5 +96,28 @@ describe("useViewedFiles", () => {
 		rerender({ latestVersionNumber: 2 });
 
 		expect(result.current.isViewed("src/a.ts")).toBe(false);
+	});
+
+	it("uses Convex viewed paths when a persisted review state is loaded", () => {
+		convexState.viewedPaths = ["src/a.ts"];
+
+		const { result } = renderHook(() => useViewedFiles(REMOTE_PR));
+
+		expect(result.current.isViewed("src/a.ts")).toBe(true);
+		expect(result.current.isViewed("src/b.ts")).toBe(false);
+	});
+
+	it("persists viewed changes to Convex when the PR has an id", () => {
+		convexState.viewedPaths = [];
+
+		const { result } = renderHook(() => useViewedFiles(REMOTE_PR));
+		act(() => result.current.toggle("src/a.ts"));
+
+		expect(convexState.setViewedPaths).toHaveBeenCalledWith({
+			pullRequestId: "pr_test",
+			versionNumber: 1,
+			paths: ["src/a.ts"],
+			viewed: true,
+		});
 	});
 });

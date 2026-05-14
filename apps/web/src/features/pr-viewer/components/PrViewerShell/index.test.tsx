@@ -19,6 +19,8 @@ vi.mock("@pierre/diffs/react", () => ({
 }));
 
 const queryState = vi.hoisted(() => ({
+	viewedPaths: [] as string[],
+	setViewedPaths: vi.fn(),
 	comments: [] as PrCommentDoc[],
 	reviewComments: [] as Array<{
 		_id: string;
@@ -45,10 +47,14 @@ const queryState = vi.hoisted(() => ({
 }));
 
 vi.mock("convex/react", () => ({
-	useQuery: () =>
-		queryState.nextQueryIndex++ % 2 === 0
-			? queryState.comments
-			: queryState.reviewComments,
+	useMutation: () => queryState.setViewedPaths,
+	useQuery: (_query: unknown, args: unknown) =>
+		args === "skip" ||
+		(typeof args === "object" && args !== null && "versionNumber" in args)
+			? queryState.viewedPaths
+			: queryState.nextQueryIndex++ % 2 === 0
+				? queryState.comments
+				: queryState.reviewComments,
 }));
 
 const TWO_FILE_PATCH = `diff --git a/packages/router/src/index.ts b/packages/router/src/index.ts
@@ -190,6 +196,8 @@ describe("PrViewerShell", () => {
 	beforeEach(() => {
 		window.location.hash = "";
 		localStorage.clear();
+		queryState.viewedPaths = [];
+		queryState.setViewedPaths.mockReset();
 		queryState.comments = [];
 		queryState.reviewComments = [];
 		queryState.nextQueryIndex = 0;

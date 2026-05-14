@@ -13,6 +13,7 @@ import type * as docTypes from "../docTypes.js";
 import type * as githubApiErrors from "../githubApiErrors.js";
 import type * as http from "../http.js";
 import type * as pullRequests from "../pullRequests.js";
+import type * as reviewState from "../reviewState.js";
 
 import type {
   ApiFromModules,
@@ -26,6 +27,7 @@ declare const fullApi: ApiFromModules<{
   githubApiErrors: typeof githubApiErrors;
   http: typeof http;
   pullRequests: typeof pullRequests;
+  reviewState: typeof reviewState;
 }>;
 
 /**

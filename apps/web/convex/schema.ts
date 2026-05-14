@@ -115,4 +115,16 @@ export default defineSchema({
 	})
 		.index('by_pull_request_and_created_at', ['pullRequestId', 'createdAt'])
 		.index('by_pull_request_and_github_id', ['pullRequestId', 'githubId']),
+	reviewStateViewedFiles: defineTable({
+		userId: v.id('users'),
+		pullRequestId: v.id('pullRequests'),
+		versionNumber: v.number(),
+		path: v.string(),
+		viewedAt: v.number(),
+	}).index('by_user_and_pull_request_and_version_and_path', [
+		'userId',
+		'pullRequestId',
+		'versionNumber',
+		'path',
+	]),
 });

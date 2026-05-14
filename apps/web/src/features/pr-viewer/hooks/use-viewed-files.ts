@@ -1,6 +1,10 @@
+import { useMutation, useQuery } from "convex/react";
 import { useCallback, useMemo, useState } from "react";
+import { api } from "../../../../convex/_generated/api";
+import type { Id } from "../../../../convex/_generated/dataModel";
 
 type PrKey = {
+	_id?: Id<"pullRequests">;
 	owner: string;
 	repo: string;
 	number: number;
@@ -47,31 +51,64 @@ function persist(key: string, set: Set<string>): void {
 
 export function useViewedFiles(pr: PrKey | null) {
 	const key = pr ? storageKey(pr) : null;
-	const [viewed, setViewed] = useState<Set<string>>(() =>
-		key ? load(key) : new Set(),
+	const versionNumber = pr?.latestVersionNumber ?? 0;
+	const persistedViewedPaths = useQuery(
+		api.reviewState.listViewedPaths,
+		pr?._id ? { pullRequestId: pr._id, versionNumber } : "skip",
 	);
-	const [trackedKey, setTrackedKey] = useState(key);
+	const setPersistedViewedPaths = useMutation(api.reviewState.setViewedPaths);
+	const initialViewed =
+		persistedViewedPaths !== undefined
+			? new Set(persistedViewedPaths)
+			: key
+				? load(key)
+				: new Set<string>();
+	const syncKey = `${key ?? "none"}|${
+		persistedViewedPaths === undefined
+			? "local"
+			: persistedViewedPaths.join("\0")
+	}`;
+	const [viewed, setViewed] = useState<Set<string>>(() => initialViewed);
+	const [trackedKey, setTrackedKey] = useState(syncKey);
 
-	if (trackedKey !== key) {
-		setTrackedKey(key);
-		setViewed(key ? load(key) : new Set());
+	if (trackedKey !== syncKey) {
+		setTrackedKey(syncKey);
+		setViewed(initialViewed);
 	}
 
 	const isViewed = useCallback((path: string) => viewed.has(path), [viewed]);
 	const viewedPaths = useMemo(() => [...viewed], [viewed]);
+	const persistRemote = useCallback(
+		(paths: readonly string[], shouldBeViewed: boolean) => {
+			if (!pr?._id) return;
+			void Promise.resolve(
+				setPersistedViewedPaths({
+					pullRequestId: pr._id,
+					versionNumber,
+					paths: [...paths],
+					viewed: shouldBeViewed,
+				}),
+			).catch(() => {
+				// Local optimistic viewed state remains useful if persistence fails.
+			});
+		},
+		[pr?._id, setPersistedViewedPaths, versionNumber],
+	);
 
 	const toggle = useCallback(
 		(path: string) => {
 			if (key === null) return;
 			setViewed((current) => {
 				const next = new Set(current);
-				if (next.has(path)) next.delete(path);
-				else next.add(path);
+				const shouldBeViewed = !next.has(path);
+				if (shouldBeViewed) next.add(path);
+				else next.delete(path);
 				persist(key, next);
+				persistRemote([path], shouldBeViewed);
 				return next;
 			});
 		},
-		[key],
+		[key, persistRemote],
 	);
 
 	const setPathsViewed = useCallback(
@@ -84,10 +121,11 @@ export function useViewedFiles(pr: PrKey | null) {
 					else next.delete(path);
 				}
 				persist(key, next);
+				persistRemote(paths, shouldBeViewed);
 				return next;
 			});
 		},
-		[key],
+		[key, persistRemote],
 	);
 
 	return { isViewed, setPathsViewed, toggle, viewedPaths };
