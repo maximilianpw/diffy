@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import type { PrDoc } from "../../../../../convex/docTypes";
 import type { DiffLocationTarget } from "../../model/diff-location";
+import type { PatchFile } from "../../model/diff-paths";
 import { PrViewerShellStatus } from ".";
 import { DiffStack } from "./DiffStack";
 import { PrViewerStatusCard } from "./PrViewerStatusCard";
@@ -12,10 +13,15 @@ type PrViewerCodePanelProps = {
 	status: PrViewerShellStatus;
 	paths: string[];
 	patch: string | null;
+	patchFiles: PatchFile[];
 	isViewed: (path: string) => boolean;
 	selectedDiffLocation?: DiffLocationTarget | null;
 	onToggleViewed: (path: string) => void;
+	onFileRendered?: (path: string) => void;
 	onDiffRendered?: (path: string) => void;
+	onScrollToFileReady?: (
+		scrollToFile: ((fileIndex: number) => void) | null,
+	) => void;
 	error?: string | null;
 	errorAction?: ReactNode;
 };
@@ -25,10 +31,13 @@ export function PrViewerCodePanel({
 	status,
 	paths,
 	patch,
+	patchFiles,
 	isViewed,
 	selectedDiffLocation,
 	onToggleViewed,
+	onFileRendered,
 	onDiffRendered,
+	onScrollToFileReady,
 	error,
 	errorAction,
 }: PrViewerCodePanelProps) {
@@ -58,12 +67,14 @@ export function PrViewerCodePanel({
 	return (
 		<PrViewerTabPanel tab={PrViewerTab.Code}>
 			<DiffStack
-				patch={patch}
+				patchFiles={patchFiles}
 				paths={paths}
 				isViewed={isViewed}
 				selectedDiffLocation={selectedDiffLocation}
 				onToggleViewed={onToggleViewed}
+				onFileRendered={onFileRendered}
 				onDiffRendered={onDiffRendered}
+				onScrollToFileReady={onScrollToFileReady}
 			/>
 		</PrViewerTabPanel>
 	);

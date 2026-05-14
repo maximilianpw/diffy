@@ -1,5 +1,6 @@
 import type { SelectedLineRange } from "@pierre/diffs";
 import { PatchDiff } from "@pierre/diffs/react";
+import { useEffect } from "react";
 import { Card } from "#/components/ui/card";
 import { cn } from "#/lib/utils";
 import { countDiffStats } from "../model/diff-stats";
@@ -13,6 +14,7 @@ type FileCardProps = {
 	viewed: boolean;
 	selectedLines?: SelectedLineRange | null;
 	onToggleViewed: () => void;
+	onFileRendered?: (path: string) => void;
 	onDiffRendered?: (path: string) => void;
 };
 
@@ -23,6 +25,7 @@ export function FileCard({
 	viewed,
 	selectedLines = null,
 	onToggleViewed,
+	onFileRendered,
 	onDiffRendered,
 }: FileCardProps) {
 	const { additions, deletions } = countDiffStats(patch);
@@ -34,6 +37,10 @@ export function FileCard({
 				onPostRender: () => onDiffRendered(path),
 			}
 		: FULL_DIFF_VIEWER_OPTIONS;
+
+	useEffect(() => {
+		onFileRendered?.(path);
+	}, [onFileRendered, path]);
 
 	return (
 		<Card

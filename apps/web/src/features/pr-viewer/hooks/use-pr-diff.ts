@@ -1,8 +1,9 @@
-import { useEffect, useState } from "react";
-import { getChangedPathsFromPatch } from "../model/diff-paths";
+import { useEffect, useMemo, useState } from "react";
+import { type PatchFile, splitPatchFiles } from "../model/diff-paths";
 
 export type PrDiff = {
 	patch: string | null;
+	patchFiles: PatchFile[];
 	paths: string[];
 	error: string | null;
 };
@@ -44,6 +45,13 @@ export function usePrDiff(diffUrl: string | undefined): PrDiff {
 		};
 	}, [diffUrl]);
 
-	const paths = patch ? getChangedPathsFromPatch(patch) : [];
-	return { patch, paths, error };
+	const patchFiles = useMemo(
+		() => (patch ? splitPatchFiles(patch) : []),
+		[patch],
+	);
+	const paths = useMemo(
+		() => patchFiles.map((file) => file.path),
+		[patchFiles],
+	);
+	return { patch, patchFiles, paths, error };
 }

@@ -18,6 +18,32 @@ vi.mock("@pierre/diffs/react", () => ({
 	)),
 }));
 
+const virtualizerState = vi.hoisted(() => ({
+	visibleIndexes: [0, 1, 2],
+	scrollToIndex: vi.fn((index: number) => {
+		virtualizerState.visibleIndexes = [index];
+	}),
+	measureElement: vi.fn(),
+}));
+
+vi.mock("@tanstack/react-virtual", () => ({
+	useWindowVirtualizer: vi.fn(({ count }: { count: number }) => ({
+		getTotalSize: () => count * 120,
+		getVirtualItems: () =>
+			virtualizerState.visibleIndexes
+				.filter((index) => index < count)
+				.map((index) => ({
+					index,
+					key: `virtual-${index}`,
+					start: index * 120,
+					size: 120,
+				})),
+		measureElement: virtualizerState.measureElement,
+		options: { scrollMargin: 0 },
+		scrollToIndex: virtualizerState.scrollToIndex,
+	})),
+}));
+
 const queryState = vi.hoisted(() => ({
 	viewedPaths: [] as string[],
 	setViewedPaths: vi.fn(),
@@ -73,6 +99,9 @@ index 3333333..4444444 100644
 +new
 `;
 
+const LARGE_FILE_COUNT = 305;
+const LARGE_PATCH = makePatch(LARGE_FILE_COUNT);
+
 type PrFixture = PrDoc & { diffUrl: string | null };
 
 function fixturePr(overrides: Partial<PrFixture> = {}): PrFixture {
@@ -116,6 +145,20 @@ function fixtureComment(overrides: Partial<PrCommentDoc> = {}): PrCommentDoc {
 		updatedAt: new Date("2026-04-13T00:00:00Z").getTime(),
 		...overrides,
 	};
+}
+
+function fixtureCommentAt(index: number): PrCommentDoc {
+	return fixtureComment({
+		_id: `comment_${index}` as PrCommentDoc["_id"],
+		githubId: 10_000 + index,
+		body: `Timeline comment ${index}`,
+		createdAt: new Date(
+			`2026-04-${String(index + 1).padStart(2, "0")}T00:00:00Z`,
+		).getTime(),
+		updatedAt: new Date(
+			`2026-04-${String(index + 1).padStart(2, "0")}T00:00:00Z`,
+		).getTime(),
+	});
 }
 
 function fixtureReviewComment(
@@ -190,6 +233,33 @@ async function switchToCodeTab() {
 	return panel;
 }
 
+function makePatch(fileCount: number): string {
+	return Array.from(
+		{ length: fileCount },
+		(_, index) => `diff --git a/src/file-${index}.ts b/src/file-${index}.ts
+index 1111111..2222222 100644
+--- a/src/file-${index}.ts
++++ b/src/file-${index}.ts
+@@ -1 +1 @@
+-old ${index}
++new ${index}
+`,
+	).join("");
+}
+
+function stubDiffFetch(patch: string) {
+	vi.stubGlobal(
+		"fetch",
+		vi.fn(
+			async () =>
+				new Response(patch, {
+					status: 200,
+					headers: { "content-type": "text/plain" },
+				}),
+		),
+	);
+}
+
 describe("PrViewerShell", () => {
 	const scrollIntoView = vi.fn();
 
@@ -202,22 +272,16 @@ describe("PrViewerShell", () => {
 		queryState.reviewComments = [];
 		queryState.nextQueryIndex = 0;
 		vi.mocked(PatchDiff).mockClear();
+		virtualizerState.visibleIndexes = [0, 1, 2];
+		virtualizerState.scrollToIndex.mockClear();
+		virtualizerState.measureElement.mockClear();
 		scrollIntoView.mockReset();
 		Object.defineProperty(Element.prototype, "scrollIntoView", {
 			configurable: true,
 			value: scrollIntoView,
 			writable: true,
 		});
-		vi.stubGlobal(
-			"fetch",
-			vi.fn(
-				async () =>
-					new Response(TWO_FILE_PATCH, {
-						status: 200,
-						headers: { "content-type": "text/plain" },
-					}),
-			),
-		);
+		stubDiffFetch(TWO_FILE_PATCH);
 	});
 
 	afterEach(() => {
@@ -326,6 +390,82 @@ describe("PrViewerShell", () => {
 		expect(
 			screen.queryByRole("heading", { name: "Reviewer context" }),
 		).toBeNull();
+	});
+
+	it("virtualizes a large pull request instead of mounting every file diff", async () => {
+		stubDiffFetch(LARGE_PATCH);
+		render(<PrViewerShell pr={fixturePr()} />);
+
+		fireEvent.click(screen.getByRole("tab", { name: "Code" }));
+
+		await waitFor(() => {
+			expect(screen.getByText("src/file-0.ts")).toBeTruthy();
+		});
+		expect(screen.getByText(String(LARGE_FILE_COUNT))).toBeTruthy();
+		expect(screen.getByText("src/file-1.ts")).toBeTruthy();
+		expect(screen.getByText("src/file-2.ts")).toBeTruthy();
+		expect(screen.queryByText("src/file-304.ts")).toBeNull();
+		expect(PatchDiff).toHaveBeenCalledTimes(3);
+	});
+
+	it("scrolls a virtualized large pull request when a far URL fragment is selected", async () => {
+		stubDiffFetch(LARGE_PATCH);
+		window.location.hash = "#305";
+		const { rerender } = render(<PrViewerShell pr={fixturePr()} />);
+
+		await waitFor(() => {
+			expect(virtualizerState.scrollToIndex).toHaveBeenCalledWith(304, {
+				align: "start",
+			});
+		});
+		rerender(<PrViewerShell pr={fixturePr()} />);
+
+		await waitFor(() => {
+			expect(screen.getByText("src/file-304.ts")).toBeTruthy();
+		});
+		expect(PatchDiff).toHaveBeenCalledWith(
+			expect.objectContaining({
+				patch: expect.stringContaining("diff --git a/src/file-304.ts"),
+			}),
+			undefined,
+		);
+	});
+
+	it("scrolls a virtualized large pull request when jumping from a review comment", async () => {
+		stubDiffFetch(LARGE_PATCH);
+		queryState.reviewComments = [
+			fixtureReviewComment({
+				path: "src/file-304.ts",
+				diffHunk: "@@ -1 +1 @@\n-old 304\n+new 304",
+			}),
+		];
+		const { rerender } = render(<PrViewerShell pr={fixturePr()} />);
+
+		fireEvent.click(
+			screen.getByRole("button", {
+				name: "View src/file-304.ts:1 in full diff",
+			}),
+		);
+
+		await waitFor(() => {
+			expect(virtualizerState.scrollToIndex).toHaveBeenCalledWith(304, {
+				align: "start",
+			});
+		});
+		rerender(<PrViewerShell pr={fixturePr()} />);
+
+		await waitFor(() => {
+			expect(PatchDiff).toHaveBeenCalledWith(
+				expect.objectContaining({
+					patch: expect.stringContaining("diff --git a/src/file-304.ts"),
+					selectedLines: expect.objectContaining({
+						start: 1,
+						end: 1,
+					}),
+				}),
+				undefined,
+			);
+		});
 	});
 
 	it("does not scroll when returning to Code from Discussions", async () => {
@@ -466,6 +606,41 @@ throw retryable;
 			}),
 			undefined,
 		);
+	});
+
+	it("collapses the middle of a long discussion and reveals the next ten comments", () => {
+		queryState.comments = Array.from({ length: 20 }, (_, index) =>
+			fixtureCommentAt(index),
+		);
+
+		render(<PrViewerShell pr={fixturePr()} />);
+
+		const discussion = screen.getByRole("region", {
+			name: "Pull request discussion",
+		});
+		expect(within(discussion).getByText("Timeline comment 0")).toBeTruthy();
+		expect(within(discussion).getByText("Timeline comment 1")).toBeTruthy();
+		expect(within(discussion).getByText("Timeline comment 2")).toBeTruthy();
+		expect(within(discussion).queryByText("Timeline comment 3")).toBeNull();
+		expect(within(discussion).queryByText("Timeline comment 12")).toBeNull();
+		expect(within(discussion).getByText("Timeline comment 17")).toBeTruthy();
+		expect(within(discussion).getByText("Timeline comment 18")).toBeTruthy();
+		expect(within(discussion).getByText("Timeline comment 19")).toBeTruthy();
+
+		fireEvent.click(
+			within(discussion).getByRole("button", {
+				name: "Show 10 more comments",
+			}),
+		);
+
+		expect(within(discussion).getByText("Timeline comment 3")).toBeTruthy();
+		expect(within(discussion).getByText("Timeline comment 12")).toBeTruthy();
+		expect(within(discussion).queryByText("Timeline comment 13")).toBeNull();
+		expect(
+			within(discussion).getByRole("button", {
+				name: "Show 4 more comments",
+			}),
+		).toBeTruthy();
 	});
 
 	it("jumps from a review comment hunk to its full diff location", async () => {

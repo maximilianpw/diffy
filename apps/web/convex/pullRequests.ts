@@ -19,6 +19,7 @@ import {
 import { decryptGitHubToken } from './githubCredentialCrypto';
 import { requireEncryptionKey } from './githubCredentials';
 import { getGitHubFetchError } from './githubApiErrors';
+import { fetchGitHubPullRequestDiffText } from './githubPullRequestDiff';
 
 const GITHUB_API = 'https://api.github.com';
 
@@ -426,6 +427,7 @@ export const importPr = action({
 			'User-Agent': 'diffy',
 		};
 		const url = `${GITHUB_API}/repos/${owner}/${repo}/pulls/${number}`;
+		const filesUrl = `${url}/files`;
 		const commentsUrl = `${GITHUB_API}/repos/${owner}/${repo}/issues/${number}/comments?per_page=100`;
 		const reviewCommentsUrl = `${GITHUB_API}/repos/${owner}/${repo}/pulls/${number}/comments?per_page=100`;
 
@@ -464,19 +466,12 @@ export const importPr = action({
 			diffStorageId = existingVersion.diffStorageId;
 			diffByteSize = existingVersion.diffByteSize;
 		} else {
-			const diffRes = await fetch(url, {
-				headers: { ...baseHeaders, Accept: 'application/vnd.github.diff' },
+			const diffText = await fetchGitHubPullRequestDiffText({
+				pullRequestUrl: url,
+				pullRequestFilesUrl: filesUrl,
+				headers: baseHeaders,
 			});
-			if (!diffRes.ok) {
-				throw new ConvexError(
-					getGitHubFetchError({
-						resource: 'PR diff',
-						status: diffRes.status,
-						body: await diffRes.text(),
-					}),
-				);
-			}
-			const diffBlob = await diffRes.blob();
+			const diffBlob = new Blob([diffText], { type: 'text/plain;charset=utf-8' });
 			diffStorageId = await ctx.storage.store(diffBlob);
 			diffByteSize = diffBlob.size;
 		}

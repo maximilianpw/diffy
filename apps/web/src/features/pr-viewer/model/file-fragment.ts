@@ -15,15 +15,17 @@ export function findFileIndexForFragment(
 	return fileIndex < fileCount ? fileIndex : null;
 }
 
-export function jumpToFileFragment(fileIndex: number): void {
-	if (typeof window === "undefined") return;
+export function jumpToFileFragment(fileIndex: number): boolean {
+	if (typeof window === "undefined") return false;
 
 	const fragmentId = getFileFragmentId(fileIndex);
 	if (window.location.hash.slice(1) !== fragmentId) {
 		window.location.hash = fragmentId;
 	}
 
-	document.getElementById(fragmentId)?.scrollIntoView({ block: "start" });
+	const fileElement = document.getElementById(fragmentId);
+	fileElement?.scrollIntoView({ block: "start" });
+	return fileElement != null;
 }
 
 export function jumpToDiffLocation(

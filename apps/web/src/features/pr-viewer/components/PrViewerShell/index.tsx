@@ -1,4 +1,10 @@
-import { type ReactNode, useEffect, useRef, useState } from "react";
+import {
+	type ReactNode,
+	useCallback,
+	useEffect,
+	useRef,
+	useState,
+} from "react";
 import type { PrDoc } from "../../../../../convex/docTypes";
 import { usePrDiff } from "../../hooks/use-pr-diff";
 import { useViewedFiles } from "../../hooks/use-viewed-files";
@@ -39,6 +45,7 @@ export function PrViewerShell({
 }: PrViewerShellProps) {
 	const {
 		patch,
+		patchFiles,
 		paths,
 		error: diffError,
 	} = usePrDiff(pr?.diffUrl ?? undefined);
@@ -62,8 +69,17 @@ export function PrViewerShell({
 	const [pendingDiffLocationJump, setPendingDiffLocationJump] =
 		useState<DiffLocationTarget | null>(null);
 	const appliedFragmentJumpRef = useRef(pendingFileJump !== null);
+	const pendingFileJumpRef = useRef(pendingFileJump);
+	pendingFileJumpRef.current = pendingFileJump;
+	const scrollToFileRef = useRef<((fileIndex: number) => void) | null>(null);
 	const treeKey = paths.join("\0");
 	const { isViewed, setPathsViewed, toggle, viewedPaths } = useViewedFiles(pr);
+	const handleScrollToFileReady = useCallback(
+		(scrollToFile: ((fileIndex: number) => void) | null) => {
+			scrollToFileRef.current = scrollToFile;
+		},
+		[],
+	);
 
 	useEffect(() => {
 		if (selectedTab === PrViewerTab.Code || appliedFragmentJumpRef.current) {
@@ -80,9 +96,14 @@ export function PrViewerShell({
 
 	useEffect(() => {
 		if (selectedTab !== PrViewerTab.Code || pendingFileJump === null) return;
+		if (pendingFileJumpRef.current !== pendingFileJump) return;
 
-		jumpToFileFragment(pendingFileJump);
-		setPendingFileJump(null);
+		if (jumpToFileFragment(pendingFileJump)) {
+			pendingFileJumpRef.current = null;
+			setPendingFileJump(null);
+			return;
+		}
+		scrollToFileRef.current?.(pendingFileJump);
 	}, [pendingFileJump, selectedTab]);
 
 	useEffect(() => {
@@ -103,7 +124,9 @@ export function PrViewerShell({
 
 		if (jumpToDiffLocation(fileIndex, pendingDiffLocationJump)) {
 			setPendingDiffLocationJump(null);
+			return;
 		}
+		scrollToFileRef.current?.(fileIndex);
 	}, [paths, pendingDiffLocationJump, selectedTab]);
 
 	function handleFileSelect(fileIndex: number) {
@@ -117,6 +140,15 @@ export function PrViewerShell({
 		setSelectedDiffLocation(target);
 		setSelectedTab(PrViewerTab.Code);
 		setPendingDiffLocationJump(target);
+	}
+
+	function handleFileRendered(path: string) {
+		const pendingFileJump = pendingFileJumpRef.current;
+		if (pendingFileJump === null || paths[pendingFileJump] !== path) return;
+		if (jumpToFileFragment(pendingFileJump)) {
+			pendingFileJumpRef.current = null;
+			setPendingFileJump(null);
+		}
 	}
 
 	function handleDiffRendered(path: string) {
@@ -186,11 +218,14 @@ export function PrViewerShell({
 						status={status}
 						paths={paths}
 						patch={patch}
+						patchFiles={patchFiles}
 						error={error}
 						isViewed={isViewed}
 						selectedDiffLocation={selectedDiffLocation}
 						onToggleViewed={toggle}
+						onFileRendered={handleFileRendered}
 						onDiffRendered={handleDiffRendered}
+						onScrollToFileReady={handleScrollToFileReady}
 						errorAction={error ? importErrorAction : undefined}
 					/>
 				)}
